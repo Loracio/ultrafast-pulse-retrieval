@@ -88,17 +88,18 @@ std::vector<std::complex<double>> DFT(const std::vector<std::complex<double>> &x
 
     int N = t.size();
 
-    std::vector<std::complex<double>> r_n;
-    std::vector<std::complex<double>> s_j;
+    std::vector<std::complex<double>> r_n(N);
+    std::vector<std::complex<double>> s_j(N);
 
     if (t[0] == 0.0)
     {
-        r_n = std::vector<std::complex<double>>(N, 1);
+        for (int i = 0; i < N; i++)
+        {
+            r_n[i] = 1;
+        }
     }
     else
     {
-
-        r_n.resize(N);
 
         for (int i = 0; i < N; i++)
         {
@@ -108,11 +109,13 @@ std::vector<std::complex<double>> DFT(const std::vector<std::complex<double>> &x
 
     if (omega[0] == 0.0)
     {
-        s_j = std::vector<std::complex<double>>(N, 1);
+        for (int i = 0; i < N; i++)
+        {
+            s_j[i] = 1;
+        }
     }
     else
     {
-        s_j.resize(N);
 
         for (int i = 0; i < N; i++)
         {
@@ -176,18 +179,18 @@ std::vector<std::complex<double>> IDFT(const std::vector<std::complex<double>> &
 
     int N = t.size();
 
-    std::vector<std::complex<double>> r_n_conj;
-    std::vector<std::complex<double>> s_j_conj;
+    std::vector<std::complex<double>> r_n_conj(N);
+    std::vector<std::complex<double>> s_j_conj(N);
 
     if (t[0] == 0.0)
     {
-        r_n_conj = std::vector<std::complex<double>>(N, 1);
+        for (int i = 0; i < N; i++)
+        {
+            r_n_conj[i] = 1;
+        }
     }
     else
     {
-
-        r_n_conj.resize(N);
-
         for (int i = 0; i < N; i++)
         {
             r_n_conj[i] = std::exp(std::complex<double>(0, i * t[0] * deltaOmega));
@@ -196,12 +199,13 @@ std::vector<std::complex<double>> IDFT(const std::vector<std::complex<double>> &
 
     if (omega[0] == 0.0)
     {
-        s_j_conj = std::vector<std::complex<double>>(N, 1);
+        for (int i = 0; i < N; i++)
+        {
+            s_j_conj[i] = 1;
+        }
     }
     else
     {
-        s_j_conj.resize(N);
-
         for (int i = 0; i < N; i++)
         {
             s_j_conj[i] = std::exp(std::complex<double>(0, t[i] * omega[0]));
@@ -234,7 +238,7 @@ std::vector<std::complex<double>> IDFT(const std::vector<std::complex<double>> &
     std::vector<std::complex<double>> result(N);
     for (int i = 0; i < N; ++i)
     {
-        result[i] = s_j_conj[i] / deltaT * std::complex<double>(out[i][0], out[i][1]); // Extract the complex output
+        result[i] = s_j_conj[i] / (N * deltaT) * std::complex<double>(out[i][0], out[i][1]); // Extract the complex output
     }
 
     // Clean up and free resources
@@ -263,7 +267,7 @@ std::vector<double> fftFreq(int N, double deltaT)
 
     for (int i = 0; i < N; i++)
     {
-        frequencies[i] = start + (i / (N * deltaT));
+        frequencies[i] = start + (i / ((N - 1) * deltaT));
     }
 
     return frequencies;

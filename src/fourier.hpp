@@ -1,12 +1,7 @@
-#ifndef FOURIER_INCLUDED
-#define FOURIER_INCLUDED
-
 /**
  * @file fourier.hpp
  * @author Víctor Loras Herrero
  * @brief Functions related to the numerical computing of the Fourier Transform using FFTW library (https://www.fftw.org/)
- * @version 0.1
- * @date 2023-07-02
  *
  * @copyright Copyright (c) 2023
  *
@@ -65,10 +60,181 @@
  * relationship, we will have problems when switching between domains.
  */
 
+#ifndef FOURIER_INCLUDED
+#define FOURIER_INCLUDED
+
 #include <vector>
 #include <complex>
 #include <cmath>
 #include <fftw3.h>
+
+/**
+ * @brief Class for efficient computing of forward and backwards Fourier Transforms using FFTW.
+ *
+ * The idea is to provide an efficient way to compute a lot of forward and backward Fourier Transforms
+ * for a vector defined on a fixed time and frequency grid with a given number of samples, N.
+ *
+ * FFTW generates a 'plan' instance that makes efficient computations of the fft for a fixed N,
+ * so this class manages to mantain one of these plans to make efficient computations with the
+ * matching phase factors given by the time and frequency arrays.
+ *
+ * If you do not care about speed or not going to do a lot of transforms, you can use DFT and IDFT
+ * functions instead.
+ */
+class FourierTransform
+{
+private:
+    int N;                                      // Number of samples
+    double deltaT;                              // Spacing in the time grid
+    double deltaOmega;                          // Spacing in the angular frequency grid
+    std::vector<double> t;                      // Time vector
+    std::vector<double> omega;                  // Angular frequency vector
+    std::vector<std::complex<double>> r_n;      // Precomputed r_n phase factors
+    std::vector<std::complex<double>> s_j;      // Precomputed s_j phase factors
+    std::vector<std::complex<double>> r_n_conj; // Precomputed r_n phase factors conjugated
+    std::vector<std::complex<double>> s_j_conj; // Precomputed s_j phase factors conjugated
+    fftw_complex *in;                           // In array for the FFTW plan
+    fftw_complex *out;                          // Out array for the FFTW plan
+    fftw_plan forwardPlan;                      // FFTW plan for forward transform
+    fftw_plan backwardPlan;                     // FFTW plan for backward transform
+    std::vector<std::complex<double>> result;   // Array that stores the last result obtained
+
+public:
+    // Constructor
+    FourierTransform(int nSamples, double dt, double t0)
+    {
+        this->N = nSamples;
+        this->deltaT = dt;
+        this->deltaOmega = 2 * M_PI / (N * deltaT);
+
+        // Calculate the time and angular frequency grids
+        t.resize(N);
+        omega.resize(N);
+        double start = -M_PI / deltaT;
+        for (int i = 0; i < N; ++i)
+        {
+            t[i] = t0 + i * deltaT;
+            omega[i] = start + (2 * M_PI * i / (N * deltaT));
+        }
+
+        // Compute r_n factors
+        r_n.resize(N);
+        r_n_conj.resize(N);
+        if (t[0] == 0.0)
+        {
+            for (int i = 0; i < N; i++)
+            {
+                r_n[i] = deltaT;
+                r_n_conj[i] = 1;
+            }
+        }
+        else
+        {
+            double constFactor = t[0] * deltaOmega;
+            for (int i = 0; i < N; i++)
+            {
+                r_n[i] = deltaT * std::exp(std::complex<double>(0, -i * constFactor));
+                r_n_conj[i] = std::exp(std::complex<double>(0, i * constFactor));
+            }
+        }
+
+        // Compute s_j factors
+        s_j.resize(N);
+        s_j_conj.resize(N);
+        if (omega[0] == 0.0)
+        {
+            double constFactor = 1 / (N * deltaT);
+            for (int i = 0; i < N; i++)
+            {
+                s_j[i] = 1;
+                s_j_conj[i] = constFactor;
+            }
+        }
+        else
+        {
+            double normFactor = 1 / (N * deltaT);
+            for (int i = 0; i < N; i++)
+            {
+                s_j[i] = std::exp(std::complex<double>(0, -t[i] * omega[0]));
+                s_j_conj[i] = std::exp(std::complex<double>(0, t[i] * omega[0])) * normFactor;
+            }
+        }
+
+        // Initialize FFTW plans
+        in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+        out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
+        forwardPlan = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+        backwardPlan = fftw_plan_dft_1d(N, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
+
+        result.resize(N);
+    }
+
+    // Destructor
+    ~FourierTransform()
+    {
+        fftw_free(in);
+        fftw_free(out);
+        fftw_destroy_plan(forwardPlan);
+        fftw_destroy_plan(backwardPlan);
+    }
+
+    // Perform forward transform
+    std::vector<std::complex<double>> forwardTransform(const std::vector<std::complex<double>> &x)
+    {
+        std::vector<std::complex<double>> x_sj(N);
+
+        // Apply s_j factors to input vector
+        for (int i = 0; i < N; i++)
+        {
+            x_sj[i] = x[i] * s_j[i];
+        }
+
+        // Prepare the input data
+        for (int i = 0; i < N; i++)
+        {
+            in[i][0] = std::real(x_sj[i]);
+            in[i][1] = std::imag(x_sj[i]);
+        }
+
+        // Execute the forward transform
+        fftw_execute_dft(forwardPlan, in, out);
+
+        // Process the output with the necessary factors
+        for (int i = 0; i < N; i++)
+        {
+            result[i] = r_n[i] * std::complex<double>(out[i][0], out[i][1]);
+        }
+
+        return result;
+    }
+
+    // Perform backward transform
+    std::vector<std::complex<double>> backwardTransform(const std::vector<std::complex<double>> &x)
+    {
+        std::vector<std::complex<double>> x_rn(N);
+        for (int i = 0; i < N; i++)
+        {
+            x_rn[i] = x[i] * r_n_conj[i];
+        }
+        // Prepare the input data
+        for (int i = 0; i < N; ++i)
+        {
+            in[i][0] = std::real(x_rn[i]); // Real part of the input
+            in[i][1] = std::imag(x_rn[i]); // Imaginary part of the input
+        }
+
+        // Execute the backward transform
+        fftw_execute_dft(backwardPlan, in, out);
+
+        // Process the output with the necessary factors
+        for (int i = 0; i < N; i++)
+        {
+            result[i] = s_j_conj[i] * std::complex<double>(out[i][0], out[i][1]);
+        }
+
+        return result;
+    }
+};
 
 /**
  * \brief Computes the Discrete Fourier Transform (DFT) of a dataset.
@@ -159,7 +325,6 @@ std::vector<std::complex<double>> DFT(const std::vector<std::complex<double>> &x
 
     return result;
 }
-
 
 /**
  * \brief Computes the Inverse Discrete Fourier Transform (IDFT) of a dataset.
@@ -267,7 +432,7 @@ std::vector<double> fftFreq(int N, double deltaT)
 
     for (int i = 0; i < N; i++)
     {
-        frequencies[i] = start + (i / ((N - 1) * deltaT));
+        frequencies[i] = start + (i / (N * deltaT));
     }
 
     return frequencies;

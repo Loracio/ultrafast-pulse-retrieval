@@ -5,10 +5,6 @@
  * @file utils.hpp
  * @author Víctor Loras Herrero
  * @brief Various auxiliary generic functions used in other modules.
- * @version 0.1
- * @date 2023-07-02
- * 
- * @copyright Copyright (c) 2023
  * 
  */
 

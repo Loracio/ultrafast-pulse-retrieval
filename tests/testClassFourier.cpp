@@ -1,7 +1,7 @@
 /**
- * @file testFourier.cpp
+ * @file testClassFourier.cpp
  * @author Víctor Loras Herrero
- * @brief Small tests to prove that the fft algorithms are working ok
+ * @brief Small tests to prove that the FourierTransform class is working ok
  * @version 0.1
  * @date 2023-07-02
  * 
@@ -23,18 +23,20 @@ int main()
     double signalDuration = 1000;
     double deltaT = signalDuration / N;
 
+    double t0 = -signalDuration / 2;
+
     std::vector<double> t (N);
 
     for (int i = 0; i < N; i++)
     {
-        t[i] =  - signalDuration / 2 + i * deltaT;
+        t[i] =  t0 + i * deltaT;
     }
     
-
     std::vector<double> omega = toAngularFrequency(fftFreq(N, deltaT));
 
-    double deltaOmega = 2 * M_PI / signalDuration;
+    double deltaOmega = 2 * M_PI / (N * deltaT);
 
+    FourierTransform ft(N, deltaT, t0);
 
     std::vector<std::complex<double>> x(N);
 
@@ -50,12 +52,14 @@ int main()
     std::vector<std::complex<double>> result (N);
     std::vector<std::complex<double>> ret_result(N);
 
-    auto startTime = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 1000; i++)
-    {
-        result = DFT(x, t, deltaT, omega, deltaOmega);
+    int numberOfTimes = 1000;
 
-        ret_result = IDFT(result, t, deltaT, omega, deltaOmega);
+    auto startTime = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < numberOfTimes; i++)
+    {
+        result = ft.forwardTransform(x);
+
+        ret_result = ft.backwardTransform(result);
     }
 
     // End the timer
@@ -65,9 +69,8 @@ int main()
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
 
     // Print the elapsed time
-    std::cout << "Elapsed time FFT: " << duration.count() / 1000 << " microseconds" << std::endl;
-    
-    
+    std::cout << "Elapsed time FFT: " << duration.count() / numberOfTimes << " microseconds" << std::endl;
+
     FILE *f;
     f = fopen("transform_check.txt", "wt");
 

@@ -438,4 +438,22 @@ std::vector<double> fftFreq(int N, double deltaT)
     return frequencies;
 }
 
+/**
+ * Converts a vector of frequencies to angular frequency units.
+ *
+ * @param frequencies The vector of frequencies to convert.
+ * @return The vector of frequencies in angular frequency units.
+ */
+std::vector<double> toAngularFrequency(const std::vector<double>& frequencies)
+{
+    std::vector<double> angularFrequencies(frequencies.size());
+
+    for (size_t i = 0; i < frequencies.size(); i++)
+    {
+        angularFrequencies[i] = 2 * M_PI * frequencies[i];
+    }
+
+    return angularFrequencies;
+}
+
 #endif // FOURIER_HPP

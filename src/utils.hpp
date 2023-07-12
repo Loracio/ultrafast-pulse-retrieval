@@ -158,22 +158,30 @@ T FWHM(const std::vector<T> &x, Numeric delta_t)
     return (rightIndex - leftIndex) * delta_t;
 }
 
-/**
- * Converts a vector of frequencies to angular frequency units.
- *
- * @param frequencies The vector of frequencies to convert.
- * @return The vector of frequencies in angular frequency units.
- */
-std::vector<double> toAngularFrequency(const std::vector<double>& frequencies)
-{
-    std::vector<double> angularFrequencies(frequencies.size());
 
-    for (size_t i = 0; i < frequencies.size(); i++)
+/**
+ * @brief Calculates a Gaussian function with center `x0` and standard deviation `sigma` for each element in the input vector `x`.
+ *
+ * @param x The input vector containing the values at which to calculate the Gaussian function.
+ * @param x0 The center of the Gaussian function. Default is 0.0.
+ * @param sigma The standard deviation of the Gaussian function. Default is 1.0.
+ * @return A vector containing the Gaussian values corresponding to each element of the input vector `x`.
+ */
+std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, double sigma = 1.0)
+{
+    std::vector<double> result;
+    result.reserve(x.size());
+
+    double d;
+
+    for (const auto& element : x)
     {
-        angularFrequencies[i] = 2 * M_PI * frequencies[i];
+        d = (element - x0) / sigma;
+        result.push_back(std::exp(-0.5 * d * d));
     }
 
-    return angularFrequencies;
+    return result;
 }
+
 
 #endif // UTILS_INCLUDED

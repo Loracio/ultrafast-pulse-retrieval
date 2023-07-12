@@ -42,11 +42,11 @@ int main()
 
     for (int i = 0; i < N; i++)
     {
-        double value = t[i];
-        double sincValue = (value != 0.0) ? std::sin(value) / value : 1.0;  // Compute sinc(x)
-        double squareValue = (value >= -signalDuration/4 && value <= signalDuration/4) ? 1.0 : 0.0; // Compute square function
+        // double sincValue = (t[i] != 0.0) ? std::sin(t[i]) / t[i] : 1.0;  // Compute sinc(x)
+        double expValue = std::exp(-t[i]*t[i]);
+        // double squareValue = (t[i] >= -signalDuration/4 && t[i] <= signalDuration/4) ? 1.0 : 0.0; // Compute square function
 
-        x[i] = std::complex<double>(sincValue, squareValue);
+        x[i] = std::complex<double>(expValue, t[i]);
     }
 
     std::vector<std::complex<double>> result (N);

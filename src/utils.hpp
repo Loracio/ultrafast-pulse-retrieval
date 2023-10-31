@@ -12,6 +12,8 @@
 #include <numeric>
 #include <vector>
 #include <algorithm>
+#include "fourier.hpp"
+#include <iostream>
 
 
 /**
@@ -183,5 +185,63 @@ std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, doub
     return result;
 }
 
+/**
+ * @brief Computes the trace of a pulse given by T(ω, τ) = | ∫ E(t)E(t - τ) exp(-i ω t) dt |²
+ *
+ * @param x The input vector containing the values of the electric field of the pulse.
+ * @param deltaT The time step.
+ * @return A 2D vector (NxN) containing the values of the trace.
+ */
+std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &x, const std::vector<double> &t, double deltaT)
+{
+    int N = x.size(); // number of samples
+    std::cout << N << std::endl;
+
+    FourierTransform ft(N, deltaT, t[0]); // delays will be introduced as the spectrum multiplied by a phase factor
+    std::vector<std::complex<double>> spectrum = ft.forwardTransform(x); // spectrum of the given electric field
+
+    std::vector<double> omega = toAngularFrequency(fftFreq(N, deltaT)); // angular frequencies of the measurement
+
+    std::vector<double> tau(N); // delays
+
+    for (int i = 0; i < N; i++)
+    {
+        tau[i] = (i - std::floor(0.5 * N)) * deltaT;
+    }
+
+    std::vector<std::vector<std::complex<double>>> delayed_spectrum(N, std::vector<std::complex<double>>(N));
+    
+    for (int i = 0; i < N; i++) // iterates through delay values
+    {
+        for (int j = 0; j < N; j++) // iterates through frequency values
+        {
+            delayed_spectrum[i][j] = spectrum[j] * std::exp(std::complex<double>(0, omega[j] * tau[i])); // delay in the time domain by τ
+        }
+    }
+
+    std::vector<std::complex<double>> delayed_pulse(N); // E(t - τ)
+    std::vector<std::complex<double>> signal_operator(N); // E(t)E(t - τ)
+    std::vector<std::vector<double>> trace_values(N, std::vector<double>(N)); // T(ω, τ)
+
+    for (int i = 0; i < N; i++)
+    {
+        delayed_pulse = ft.backwardTransform(delayed_spectrum[i]);
+        for (int j = 0; j < N; j++)
+        {
+            std::cout << delayed_pulse[j] << std::endl;
+            signal_operator[j] = x[j] * delayed_pulse[j]; // E(t)E(t - τ)
+        }
+
+        signal_operator = ft.forwardTransform(signal_operator); // FT{E(t)E(t - τ)}
+
+        for (int j = 0; j < N; j++)
+        {
+            trace_values[i][j] = std::norm(signal_operator[j]); // |FT{E(t)E(t - τ)}|²
+        }
+        
+    }
+
+    return trace_values;
+}
 
 #endif // UTILS_INCLUDED

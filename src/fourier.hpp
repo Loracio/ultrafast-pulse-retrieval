@@ -84,11 +84,6 @@
 class FourierTransform
 {
 private:
-    int N;                                      // Number of samples
-    double deltaT;                              // Spacing in the time grid
-    double deltaOmega;                          // Spacing in the angular frequency grid
-    std::vector<double> t;                      // Time vector
-    std::vector<double> omega;                  // Angular frequency vector
     std::vector<std::complex<double>> r_n;      // Precomputed r_n phase factors
     std::vector<std::complex<double>> s_j;      // Precomputed s_j phase factors
     std::vector<std::complex<double>> r_n_conj; // Precomputed r_n phase factors conjugated
@@ -97,9 +92,15 @@ private:
     fftw_complex *out;                          // Out array for the FFTW plan
     fftw_plan forwardPlan;                      // FFTW plan for forward transform
     fftw_plan backwardPlan;                     // FFTW plan for backward transform
-    std::vector<std::complex<double>> result;   // Array that stores the last result obtained
 
 public:
+    int N;                                      // Number of samples
+    double deltaT;                              // Spacing in the time grid
+    double deltaOmega;                          // Spacing in the angular frequency grid
+    std::vector<double> t;                      // Time vector
+    std::vector<double> omega;                  // Angular frequency vector
+    std::vector<std::complex<double>> result;   // Array that stores the last result obtained
+
     // Constructor
     FourierTransform(int nSamples, double dt, double t0)
     {

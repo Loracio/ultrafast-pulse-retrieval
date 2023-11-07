@@ -3,7 +3,6 @@
  * @author Víctor Loras Herrero
  * @brief Small tests to prove that the trace function is working ok
  * @version 0.1
- * @date 2023-10-31
  * 
  * @copyright Copyright (c) 2023
  * 

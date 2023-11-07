@@ -13,7 +13,6 @@
 #include <vector>
 #include <algorithm>
 #include "fourier.hpp"
-#include <iostream>
 
 
 /**
@@ -28,11 +27,18 @@
  * \param y The second vector.
  * \return The mean value of the element-wise division of `x` and `y`.
  */
-template <typename T>
-T mean(const std::vector<T> &x, const std::vector<T> &y)
+double mean(const std::vector<double> &x, const std::vector<double> &y)
 {
-    T sumProduct = std::inner_product(x.begin(), x.end(), y.begin(), 0);
-    T sumY = std::accumulate(y.begin(), y.end(), 0);
+    int N = x.size();
+
+    double sumProduct = 0;
+    double sumY = 0;
+
+    for (int i = 0; i < N; i++)
+    {
+        sumProduct += x[i] * y[i];
+        sumY += y[i];
+    }
 
     return sumProduct / sumY;
 }
@@ -186,6 +192,41 @@ std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, doub
 }
 
 /**
+ * @brief Calculate the unwrapped phase of a vector of complex numbers.
+ *
+ * This function takes a vector of complex numbers and returns a vector of the
+ * unwrapped phase values. The phase values are unwrapped to ensure smooth
+ * transitions when the phase crosses the -π to π boundary.
+ *
+ * @param complexVector A vector of complex numbers for which the phase needs
+ *                      to be unwrapped.
+ * @return A vector of unwrapped phase values corresponding to the input
+ *         complex numbers.
+ */
+std::vector<double> unwrapPhase(const std::vector<std::complex<double>>& complexVector) {
+    std::vector<double> unwrappedPhase;
+    unwrappedPhase.reserve(complexVector.size());
+
+    // Calculate the phase of each complex number
+    for (const std::complex<double>& z : complexVector) {
+        unwrappedPhase.push_back(std::arg(z));
+    }
+
+    // Unwrap the phase to ensure smooth transitions across -π to π
+    for (size_t i = 1; i < unwrappedPhase.size(); ++i) {
+        double diff = unwrappedPhase[i] - unwrappedPhase[i - 1];
+        if (diff < -M_PI) {
+            unwrappedPhase[i] += 2 * M_PI;
+        } else if (diff > M_PI) {
+            unwrappedPhase[i] -= 2 * M_PI;
+        }
+    }
+
+    return unwrappedPhase;
+}
+
+
+/**
  * @brief Computes the trace of a pulse given by T(ω, τ) = | ∫ E(t)E(t - τ) exp(-i ω t) dt |²
  *
  * @param x The input vector containing the values of the electric field of the pulse.
@@ -195,7 +236,6 @@ std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, doub
 std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &x, const std::vector<double> &t, double deltaT)
 {
     int N = x.size(); // number of samples
-    std::cout << N << std::endl;
 
     FourierTransform ft(N, deltaT, t[0]); // delays will be introduced as the spectrum multiplied by a phase factor
     std::vector<std::complex<double>> spectrum = ft.forwardTransform(x); // spectrum of the given electric field
@@ -228,7 +268,6 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
         delayed_pulse = ft.backwardTransform(delayed_spectrum[i]);
         for (int j = 0; j < N; j++)
         {
-            std::cout << delayed_pulse[j] << std::endl;
             signal_operator[j] = x[j] * delayed_pulse[j]; // E(t)E(t - τ)
         }
 

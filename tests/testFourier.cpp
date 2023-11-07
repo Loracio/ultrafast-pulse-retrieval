@@ -3,7 +3,6 @@
  * @author Víctor Loras Herrero
  * @brief Small tests to prove that the fft algorithms are working ok
  * @version 0.1
- * @date 2023-07-02
  * 
  * @copyright Copyright (c) 2023
  * 

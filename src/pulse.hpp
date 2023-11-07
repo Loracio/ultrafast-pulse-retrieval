@@ -350,7 +350,7 @@ public:
 
             iters++;
 
-            if (iters == 10)
+            if (iters == 100)
             {
                 throw std::runtime_error("Could not create a pulse for these parameters!");
                 return 0;

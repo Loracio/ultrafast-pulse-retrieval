@@ -36,7 +36,7 @@ int main()
 
     FourierTransform ft(N, deltaT, t0);
 
-    Pulse examplePulse(ft, 0);
+    Pulse examplePulse(ft);
 
 
     int numberOfTimes = 100;

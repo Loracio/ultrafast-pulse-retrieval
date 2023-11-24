@@ -191,3 +191,6 @@ dkms.conf
 # vs code
 .vscode
 *.h5
+
+# txt test files
+*.txt

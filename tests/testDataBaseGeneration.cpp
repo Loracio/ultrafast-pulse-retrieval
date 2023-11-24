@@ -21,7 +21,7 @@
 int main()
 {
     // Pulse parameters
-    int N = 128;
+    int N = 64;
     double signalDuration = 1;
     double deltaT = signalDuration / N;
 
@@ -29,15 +29,15 @@ int main()
 
     FourierTransform ft(N, deltaT, t0);
 
-    Pulse generatedPulse(ft, 0);
+    Pulse generatedPulse(ft);
     std::vector<std::vector<double>> Tmn;
     std::vector<std::complex<double>> field;
 
     // DB parameters
-    int numberOfPulses = 4000;
+    int numberOfPulses = 10000;
 
     double initialTBP = 0.51;
-    double finalTBP = 1.51;
+    double finalTBP = 0.81;
     double stepTBP = 0.10;
 
     int intervals = (finalTBP - initialTBP) / stepTBP;

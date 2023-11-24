@@ -1,5 +1,5 @@
 /**
- * @file testClassFourier.cpp
+ * @file testTrace.cpp
  * @author Víctor Loras Herrero
  * @brief Small tests to prove that the trace function is working ok
  * @version 0.1
@@ -10,6 +10,7 @@
 
 #include "../src/utils.hpp"
 #include "../src/fourier.hpp"
+#include "../src/pulse.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -172,6 +173,10 @@ int main(){
 
     std::vector<std::vector<double>> Tmn = trace(x, t, deltaT);
 
+    FourierTransform ft(N, deltaT, t0);
+    Pulse testPulse(ft);
+    testPulse.setField(x);
+    std::vector<std::vector<double>> ret_trace = testPulse.getTrace();
 
     FILE *f;
     f = fopen("trace_check.txt", "wt");
@@ -187,7 +192,24 @@ int main(){
             fprintf(f, "%lf\t", Tmn[i][j]);
         }
     }
-    
+
     fclose(f);
+    
+    FILE *g;
+    g = fopen("trace_check_class.txt", "wt");
+
+    if (g == NULL){
+        return 1;
+    }
+
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            fprintf(g, "%lf\t", ret_trace[i][j]);
+        }
+    }
+
+    fclose(g);
 
 }

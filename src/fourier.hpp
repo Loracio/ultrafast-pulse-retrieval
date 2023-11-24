@@ -94,12 +94,12 @@ private:
     fftw_plan backwardPlan;                     // FFTW plan for backward transform
 
 public:
-    int N;                                      // Number of samples
-    double deltaT;                              // Spacing in the time grid
-    double deltaOmega;                          // Spacing in the angular frequency grid
-    std::vector<double> t;                      // Time vector
-    std::vector<double> omega;                  // Angular frequency vector
-    std::vector<std::complex<double>> result;   // Array that stores the last result obtained
+    int N;                                    // Number of samples
+    double deltaT;                            // Spacing in the time grid
+    double deltaOmega;                        // Spacing in the angular frequency grid
+    std::vector<double> t;                    // Time vector
+    std::vector<double> omega;                // Angular frequency vector
+    std::vector<std::complex<double>> result; // Array that stores the last result obtained
 
     // Constructor
     FourierTransform(int nSamples, double dt, double t0)
@@ -143,7 +143,7 @@ public:
         s_j.resize(N);
         s_j_conj.resize(N);
         if (omega[0] == 0.0)
-        {
+        {   
             double constFactor = 1 / (N * deltaT);
             for (int i = 0; i < N; i++)
             {
@@ -286,7 +286,7 @@ std::vector<std::complex<double>> DFT(const std::vector<std::complex<double>> &x
 
         for (int i = 0; i < N; i++)
         {
-            s_j[i] = std::exp(std::complex<double>(0, - t[i] * omega[0]));
+            s_j[i] = std::exp(std::complex<double>(0, -t[i] * omega[0]));
         }
     }
 
@@ -415,7 +415,6 @@ std::vector<std::complex<double>> IDFT(const std::vector<std::complex<double>> &
     return result;
 }
 
-
 /**
  * Generate the frequency array for the discrete Fourier transform (DFT).
  * The function returns an equispaced frequency array corresponding to the given
@@ -445,7 +444,7 @@ std::vector<double> fftFreq(int N, double deltaT)
  * @param frequencies The vector of frequencies to convert.
  * @return The vector of frequencies in angular frequency units.
  */
-std::vector<double> toAngularFrequency(const std::vector<double>& frequencies)
+std::vector<double> toAngularFrequency(const std::vector<double> &frequencies)
 {
     std::vector<double> angularFrequencies(frequencies.size());
 

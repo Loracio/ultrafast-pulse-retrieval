@@ -5,7 +5,7 @@
  * @file utils.hpp
  * @author Víctor Loras Herrero
  * @brief Various auxiliary generic functions used in other modules.
- * 
+ *
  */
 
 #include <cmath>
@@ -13,7 +13,6 @@
 #include <vector>
 #include <algorithm>
 #include "fourier.hpp"
-
 
 /**
  * \brief Computes the mean value of the element-wise division of two vectors.
@@ -43,7 +42,6 @@ double mean(const std::vector<double> &x, const std::vector<double> &y)
     return sumProduct / sumY;
 }
 
-
 /**
  * \brief Computes the standard deviation of a dataset.
  *
@@ -56,7 +54,7 @@ double mean(const std::vector<double> &x, const std::vector<double> &y)
  * \return The standard deviation of the dataset.
  */
 template <typename T>
-T stdDev(const std::vector<T>& x, const std::vector<T>& y)
+T stdDev(const std::vector<T> &x, const std::vector<T> &y)
 {
     T meanValue = mean(x, y);
 
@@ -72,7 +70,6 @@ T stdDev(const std::vector<T>& x, const std::vector<T>& y)
 
     return std::sqrt(sumNum / sumY);
 }
-
 
 /**
  * \brief Finds the maximum element in a vector.
@@ -166,7 +163,6 @@ T FWHM(const std::vector<T> &x, Numeric delta_t)
     return (rightIndex - leftIndex) * delta_t;
 }
 
-
 /**
  * @brief Calculates a Gaussian function with center `x0` and standard deviation `sigma` for each element in the input vector `x`.
  *
@@ -175,14 +171,14 @@ T FWHM(const std::vector<T> &x, Numeric delta_t)
  * @param sigma The standard deviation of the Gaussian function. Default is 1.0.
  * @return A vector containing the Gaussian values corresponding to each element of the input vector `x`.
  */
-std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, double sigma = 1.0)
+std::vector<double> gaussian(const std::vector<double> &x, double x0 = 0.0, double sigma = 1.0)
 {
     std::vector<double> result;
     result.reserve(x.size());
 
     double d;
 
-    for (const auto& element : x)
+    for (const auto &element : x)
     {
         d = (element - x0) / sigma;
         result.push_back(std::exp(-0.5 * d * d));
@@ -203,28 +199,33 @@ std::vector<double> gaussian(const std::vector<double>& x, double x0 = 0.0, doub
  * @return A vector of unwrapped phase values corresponding to the input
  *         complex numbers.
  */
-std::vector<double> unwrapPhase(const std::vector<std::complex<double>>& complexVector) {
+std::vector<double> unwrapPhase(const std::vector<std::complex<double>> &complexVector)
+{
     std::vector<double> unwrappedPhase;
     unwrappedPhase.reserve(complexVector.size());
 
     // Calculate the phase of each complex number
-    for (const std::complex<double>& z : complexVector) {
+    for (const std::complex<double> &z : complexVector)
+    {
         unwrappedPhase.push_back(std::arg(z));
     }
 
     // Unwrap the phase to ensure smooth transitions across -π to π
-    for (size_t i = 1; i < unwrappedPhase.size(); ++i) {
+    for (size_t i = 1; i < unwrappedPhase.size(); ++i)
+    {
         double diff = unwrappedPhase[i] - unwrappedPhase[i - 1];
-        if (diff < -M_PI) {
+        if (diff < -M_PI)
+        {
             unwrappedPhase[i] += 2 * M_PI;
-        } else if (diff > M_PI) {
+        }
+        else if (diff > M_PI)
+        {
             unwrappedPhase[i] -= 2 * M_PI;
         }
     }
 
     return unwrappedPhase;
 }
-
 
 /**
  * @brief Computes the trace of a pulse given by T(ω, τ) = | ∫ E(t)E(t - τ) exp(-i ω t) dt |²
@@ -237,7 +238,7 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
 {
     int N = x.size(); // number of samples
 
-    FourierTransform ft(N, deltaT, t[0]); // delays will be introduced as the spectrum multiplied by a phase factor
+    FourierTransform ft(N, deltaT, t[0]);                                // delays will be introduced as the spectrum multiplied by a phase factor
     std::vector<std::complex<double>> spectrum = ft.forwardTransform(x); // spectrum of the given electric field
 
     std::vector<double> omega = toAngularFrequency(fftFreq(N, deltaT)); // angular frequencies of the measurement
@@ -250,7 +251,7 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
     }
 
     std::vector<std::vector<std::complex<double>>> delayed_spectrum(N, std::vector<std::complex<double>>(N));
-    
+
     for (int i = 0; i < N; i++) // iterates through delay values
     {
         for (int j = 0; j < N; j++) // iterates through frequency values
@@ -259,8 +260,8 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
         }
     }
 
-    std::vector<std::complex<double>> delayed_pulse(N); // E(t - τ)
-    std::vector<std::complex<double>> signal_operator(N); // E(t)E(t - τ)
+    std::vector<std::complex<double>> delayed_pulse(N);                       // E(t - τ)
+    std::vector<std::complex<double>> signal_operator(N);                     // E(t)E(t - τ)
     std::vector<std::vector<double>> trace_values(N, std::vector<double>(N)); // T(ω, τ)
 
     for (int i = 0; i < N; i++)
@@ -277,7 +278,6 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
         {
             trace_values[i][j] = std::norm(signal_operator[j]); // |FT{E(t)E(t - τ)}|²
         }
-        
     }
 
     return trace_values;

@@ -23,7 +23,7 @@ public:
     Pulse *result; // Resulting pulse of the retrieval
 
     std::vector<std::vector<double>> Tmeas; // Measured trace
-    double Tmeas_max_squared;               // Maximum value of the measured trace
+    double TmeasMaxSquared;                 // Maximum value of the measured trace
 
     std::vector<double> tau;                               // Delays of the pulse in the time domain
     std::vector<std::vector<std::complex<double>>> delays; // Delays of the pulse in the frequency domain. NxN matrix that stores each delay for each frequency
@@ -34,17 +34,14 @@ public:
     std::vector<std::vector<std::complex<double>>> Amk;     // Delayed pulse by τ_m
     std::vector<std::vector<double>> Tmn;                   // Trace of the resulting pulse
 
-    double mu;                                   // Scale factor
-    double r;                                    // Sum of squared residuals
-    double R;                                    // Trace error
-    double bestError;                            // Best achieved trace error
-    std::vector<std::complex<double>> bestField; // Result of the best field for retrieval
+    double mu;        // Scale factor
+    double r;         // Sum of squared residuals
+    double R;         // Trace error
+    double bestError; // Best achieved trace error
 
     double Z;                                // Sum of difference between the signal operators in the frequency domain
     std::vector<std::complex<double>> gradZ; // Stores the value of the gradient of Z
     double gamma;                            // Gradient descent step
-
-    double minimumR; // Stores the value of the lowest trace error (R) encountered
 
     retrieverBase(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured)
     {
@@ -53,21 +50,22 @@ public:
 
         //! Starting pulse as a random pulse with TBP = 0.5
         this->result = new Pulse(ft);
-        this->result->randomPulse(2);
+        this->result->randomPulse(0.51);
 
         this->Tmeas = Tmeasured;
-        this->Tmeas_max_squared = 0;
+        this->TmeasMaxSquared = 0;
         for (int i = 0; i < this->N; i++)
         {
             for (int j = 0; j < this->N; j++)
             {
-                if(Tmeasured[i][j] > this->Tmeas_max_squared){
-                    this->Tmeas_max_squared = Tmeasured[i][j];
+                if (Tmeasured[i][j] > this->TmeasMaxSquared)
+                {
+                    this->TmeasMaxSquared = Tmeasured[i][j];
                 }
             }
         }
-        
-        this->Tmeas_max_squared *= this->Tmeas_max_squared;
+
+        this->TmeasMaxSquared *= this->TmeasMaxSquared;
 
         this->tau.reserve(this->N);
         for (int i = 0; i < this->N; i++)
@@ -101,10 +99,20 @@ public:
         {
             for (int j = 0; j < this->N; j++) // iterates through frequency values
             {
-                delayedSpectrum[i][j] = spectrum[j] * this->delays[i][j]; // delay in the time domain by
+                delayedSpectrum[i][j] = spectrum[j] * this->delays[i][j]; // delay in the time domain by τ
             }
             this->Amk[i] = this->_ft->backwardTransform(delayedSpectrum[i]); // E(t - τ)
         }
+    }
+
+    void computeAmk(const std::vector<std::complex<double>> &spectrum, int randomIndex)
+    {
+        std::vector<std::complex<double>> delayedSpectrum(this->N);
+        for (int j = 0; j < this->N; j++)
+        {
+            delayedSpectrum[j] = spectrum[j] * this->delays[randomIndex][j]; // delay in the time domain by τ
+        }
+        this->Amk[randomIndex] = this->_ft->backwardTransform(delayedSpectrum); // E(t - τ)
     }
 
     void computeSmk(const std::vector<std::complex<double>> &field)
@@ -118,6 +126,14 @@ public:
         }
     }
 
+    void computeSmk(const std::vector<std::complex<double>> &field, int randomIndex)
+    {
+        for (int j = 0; j < this->N; j++)
+        {
+            this->Smk[randomIndex][j] = Amk[randomIndex][j] * field[j]; // E(t - τ) E(t)
+        }
+    }
+
     void computeSmn()
     {
         for (int i = 0; i < this->N; i++)
@@ -126,14 +142,28 @@ public:
         }
     }
 
+    void computeSmn(int randomIndex)
+    {
+
+        this->Smn[randomIndex] = this->_ft->forwardTransform(this->Smk[randomIndex]);
+    }
+
     void computeTmn()
     {
         for (int i = 0; i < this->N; i++)
         {
             for (int j = 0; j < this->N; j++)
             {
-                this->Tmn[i][j] = abs(this->Smn[i][j]) * abs(this->Smn[i][j]);
+                this->Tmn[i][j] = std::norm(this->Smn[i][j]);
             }
+        }
+    }
+
+    void computeTmn(int randomIndex)
+    {
+        for (int j = 0; j < this->N; j++)
+        {
+            this->Tmn[randomIndex][j] = std::norm(this->Smn[randomIndex][j]);
         }
     }
 
@@ -155,8 +185,7 @@ public:
 
     void computeResiduals()
     {
-        std::vector<std::vector<double>> difference;
-        difference.resize(this->N, std::vector<double>(this->N));
+        std::vector<std::vector<double>> difference(this->N, std::vector<double>(this->N));
 
         for (int i = 0; i < this->N; ++i)
         {
@@ -181,18 +210,14 @@ public:
 
     void computeTraceError()
     {
-        this->R = sqrt(this->r / (this->N * this->N * this->Tmeas_max_squared));
+        this->R = sqrt(this->r / (this->N * this->N * this->TmeasMaxSquared));
     }
 };
 
 class GPA : public retrieverBase
 {
-private: //! Get in here all the public functions when everything works OK.
-public:
-    GPA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
-    {
-    }
-
+private:
+    std::vector<std::complex<double>> bestField; // Result of the best field for retrieval
     void computeNextSmk()
     {
         std::vector<std::vector<double>> absSmn(this->N, std::vector<double>(this->N));
@@ -257,10 +282,10 @@ public:
                 {
                     this->gradZ[j] += dS[m][j + m] * std::conj(this->Amk[m][j + m]);
                 }
-                else{
+                else
+                {
                     this->gradZ[j] += dS[m][j + m - this->N] * std::conj(this->Amk[m][j + m - this->N]);
                 }
-                
             }
 
             this->gradZ[j] *= -2;
@@ -279,7 +304,8 @@ public:
         this->result->updateSpectrum();
     }
 
-    void computeZ(){
+    void computeZ()
+    {
         this->Z = 0;
 
         for (int i = 0; i < this->N; i++)
@@ -287,8 +313,13 @@ public:
             for (int j = 0; j < this->N; j++)
             {
                 this->Z += norm(this->nextSmk[i][j] - this->Smk[i][j]);
-            }   
+            }
         }
+    }
+
+public:
+    GPA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
+    {
     }
 
     Pulse retrieve(double tolerance, double maximumIterations)
@@ -298,6 +329,7 @@ public:
         this->bestError = std::numeric_limits<double>::infinity();
         this->computeAmk(this->result->getSpectrum());
         this->computeSmk(this->result->getField());
+        this->computeSmn();
         this->computeTmn();
         this->computeMu();
         this->computeResiduals();
@@ -337,6 +369,388 @@ public:
 
         this->result->setField(this->bestField);
         this->result->updateSpectrum();
+
+        return *this->result;
+    }
+};
+
+class COPRA : public retrieverBase
+{
+private:
+    double previousMaxGradient;
+    double currentMaxGradient;
+    double etar;
+    double etaz;
+
+    double alpha = 0.25; //! Should change as an argument in some function.
+
+    std::vector<std::vector<std::complex<double>>> gradrmk;
+
+    std::vector<std::complex<double>> bestSpectrum; // Result of the best spectrum for retrieval
+
+    void computeNextSmk()
+    {
+        std::vector<std::vector<double>> absSmn(this->N, std::vector<double>(this->N));
+        for (int i = 0; i < this->N; ++i)
+        {
+            for (int j = 0; j < this->N; ++j)
+            {
+                absSmn[i][j] = std::abs(this->Smn[i][j]);
+            }
+        }
+
+        std::vector<std::complex<double>> nextSmn(this->N);
+        for (int i = 0; i < this->N; ++i)
+        {
+            for (int j = 0; j < this->N; ++j)
+            {
+                if (absSmn[i][j] > 0.0)
+                {
+                    nextSmn[j] = this->Smn[i][j] / absSmn[i][j] * sqrt(this->Tmeas[i][j] / this->mu);
+                }
+                else
+                {
+                    nextSmn[j] = sqrt(this->Tmeas[i][j] / this->mu);
+                }
+            }
+
+            this->nextSmk[i] = this->_ft->backwardTransform(nextSmn);
+        }
+    }
+
+    void computeNextSmk(int randomIndex)
+    {
+        std::vector<double> absSmn(this->N);
+        for (int j = 0; j < this->N; ++j)
+        {
+            absSmn[j] = std::abs(this->Smn[randomIndex][j]);
+        }
+
+        std::vector<std::complex<double>> nextSmn(this->N);
+        for (int j = 0; j < this->N; ++j)
+        {
+            if (absSmn[j] > 0.0)
+            {
+                nextSmn[j] = this->Smn[randomIndex][j] / absSmn[j] * sqrt(this->Tmeas[randomIndex][j] / this->mu);
+            }
+            else
+            {
+                nextSmn[j] = sqrt(this->Tmeas[randomIndex][j] / this->mu);
+            }
+        }
+
+        this->nextSmk[randomIndex] = this->_ft->backwardTransform(nextSmn);
+    }
+
+    void computeGradZ()
+    {
+        std::vector<std::complex<double>> dSmkEk(this->N);
+        std::vector<std::complex<double>> dSmkAmk(this->N);
+        std::vector<std::complex<double>> currentField = this->result->getField();
+
+        for (int i = 0; i < this->N; i++)
+        {
+            this->gradZ[i] = 0;
+        }
+
+        for (int m = 0; m < this->N; m++)
+        {
+            for (int k = 0; k < this->N; ++k)
+            {
+                dSmkEk[k] = (this->nextSmk[m][k] - this->Smk[m][k]) * std::conj(currentField[k]);
+                dSmkAmk[k] = (this->nextSmk[m][k] - this->Smk[m][k]) * std::conj(this->Amk[m][k]);
+            }
+
+            dSmkEk = this->_ft->forwardTransform(dSmkEk);
+            dSmkAmk = this->_ft->forwardTransform(dSmkAmk);
+
+            for (int n = 0; n < this->N; n++)
+            {
+
+                this->gradZ[n] += this->delays[m][n] * dSmkEk[n] + dSmkAmk[n];
+            }
+        }
+
+        for (int i = 0; i < this->N; i++)
+        {
+            // Multiply by common factor
+            this->gradZ[i] *= -4 * M_PI * this->_ft->deltaOmega / (this->_ft->deltaT);
+        }
+    }
+
+    void computeGradZ(int chosenIndex)
+    {
+        std::vector<std::complex<double>> dSmkEk(this->N);
+        std::vector<std::complex<double>> dSmkAmk(this->N);
+        std::vector<std::complex<double>> currentField = this->result->getField();
+        for (int i = 0; i < this->N; ++i)
+        {
+            dSmkEk[i] = (this->nextSmk[chosenIndex][i] - this->Smk[chosenIndex][i]) * std::conj(currentField[i]);
+            dSmkAmk[i] = (this->nextSmk[chosenIndex][i] - this->Smk[chosenIndex][i]) * std::conj(this->Amk[chosenIndex][i]);
+        }
+
+        dSmkEk = this->_ft->forwardTransform(dSmkEk);
+        dSmkAmk = this->_ft->forwardTransform(dSmkAmk);
+
+        for (int i = 0; i < this->N; i++)
+        {
+            this->gradZ[i] = -4 * M_PI * this->_ft->deltaOmega / (this->_ft->deltaT) * (this->delays[chosenIndex][i] * dSmkEk[i] + dSmkAmk[i]);
+        }
+    }
+
+    void computeZ()
+    {
+        this->Z = 0;
+
+        for (int i = 0; i < this->N; i++)
+        {
+            for (int j = 0; j < this->N; j++)
+            {
+                this->Z += std::norm(this->nextSmk[i][j] - this->Smk[i][j]);
+            }
+        }
+    }
+
+    void computeZ(int randomIndex)
+    {
+        this->Z = 0;
+
+        for (int j = 0; j < this->N; j++)
+        {
+            this->Z += std::norm(this->nextSmk[randomIndex][j] - this->Smk[randomIndex][j]);
+        }
+    }
+
+    void computeGradrmk()
+    {
+        std::vector<std::complex<double>> difference(this->N);
+        for (int i = 0; i < this->N; ++i)
+        {
+            for (int j = 0; j < this->N; ++j)
+            {
+                difference[j] = -2 * this->mu * this->_ft->deltaT / (M_PI * this->_ft->deltaOmega) * (this->Tmeas[i][j] - this->mu * this->Tmn[i][j]) * this->Smn[i][j];
+            }
+
+            this->gradrmk[i] = this->_ft->backwardTransform(difference);
+        }
+    }
+
+    void computeNextSpectrum(double step, const std::vector<std::complex<double>> &gradient)
+    {
+        std::vector<std::complex<double>> currentSpectrum = this->result->getSpectrum();
+        for (int i = 0; i < this->N; i++)
+        {
+            currentSpectrum[i] -= step * gradient[i];
+        }
+
+        this->result->setSpectrum(currentSpectrum);
+        this->result->updateField();
+    }
+
+    void localIteration(int randomIndex)
+    {
+        this->computeAmk(this->result->getSpectrum(), randomIndex);
+        this->computeSmk(this->result->getField(), randomIndex);
+        this->computeSmn(randomIndex);
+        this->computeTmn(randomIndex);
+
+        // Compute projection on Smk
+        this->computeNextSmk(randomIndex);
+
+        this->computeZ(randomIndex);
+        this->computeGradZ(randomIndex);
+        double gradNorm = this->computeGradZNorm();
+        if (gradNorm > this->currentMaxGradient)
+        {
+            this->currentMaxGradient = gradNorm;
+        }
+
+        this->gamma = this->Z;
+        if (this->currentMaxGradient > this->previousMaxGradient)
+        {
+            this->gamma /= this->currentMaxGradient;
+        }
+        else
+        {
+            this->gamma /= this->previousMaxGradient;
+        }
+
+        this->computeNextSpectrum(this->gamma, this->gradZ);
+    }
+
+    void globalIteration()
+    {
+        this->computeAmk(this->result->getSpectrum());
+        this->computeSmk(this->result->getField());
+        this->computeSmn();
+        this->computeTmn();
+        this->computeMu();
+        this->computeResiduals();
+
+        this->computeGradrmk();
+        double gradrmkNorm = this->computeGradrmkNorm();
+        this->etar = this->alpha * this->r / gradrmkNorm;
+
+        this->nextSmkGradDescent();
+
+        this->computeZ();
+        this->computeGradZ();
+
+        double gradZNorm = this->computeGradZNorm();
+        this->etaz = this->alpha * this->Z / gradZNorm;
+
+        this->computeNextSpectrum(this->etaz, this->gradZ);
+    }
+
+    std::vector<int> randomIndexShuffle()
+    {
+        std::vector<int> indices(this->N);
+        std::random_device rd;
+        std::mt19937 rng(rd());
+
+        std::iota(indices.begin(), indices.end(), 0); // Fill indices with 0, 1, ..., N-1
+
+        // Shuffle the array of indices
+        std::shuffle(indices.begin(), indices.end(), rng);
+
+        return indices;
+    }
+
+    double computeGradZNorm()
+    {
+        double sum = 0;
+        for (int i = 0; i < this->N; i++)
+        {
+            sum += std::norm(this->gradZ[i]);
+        }
+        return sum;
+    }
+
+    double computeGradrmkNorm()
+    {
+        double sum = 0;
+        for (int m = 0; m < this->N; m++)
+        {
+            for (int k = 0; k < this->N; k++)
+            {
+                sum += std::norm(this->gradrmk[m][k]);
+            }
+        }
+        return sum;
+    }
+
+    void nextSmkGradDescent()
+    {
+        for (int m = 0; m < this->N; m++)
+        {
+            for (int k = 0; k < this->N; k++)
+            {
+                this->nextSmk[m][k] = this->Smk[m][k] - this->etar * this->gradrmk[m][k];
+            }
+        }
+    }
+
+public:
+    COPRA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
+    {
+        this->gradrmk.resize(this->N, std::vector<std::complex<double>>(this->N));
+    }
+
+    Pulse retrieve(double tolerance, double maximumIterations)
+    {
+        int nIter = 0;
+        int stepsSinceLastImprovement = 0;
+        bool mode = 1;
+        std::vector<int> randomIndexes;
+
+        this->bestError = std::numeric_limits<double>::infinity();
+
+        this->computeAmk(this->result->getSpectrum());
+        this->computeSmk(this->result->getField());
+        this->computeSmn();
+        this->computeTmn();
+        this->computeMu();
+        this->computeResiduals();
+        this->computeTraceError();
+
+        this->computeNextSmk();
+        this->currentMaxGradient = 0;
+        for (int m = 0; m < this->N; m++)
+        {
+            this->computeGradZ(m);
+
+            this->previousMaxGradient = this->computeGradZNorm();
+            if (this->previousMaxGradient > this->currentMaxGradient)
+            {
+                this->currentMaxGradient = this->previousMaxGradient;
+            }
+        }
+
+        while (this->R > tolerance && nIter < maximumIterations)
+        {
+
+            if (mode)
+            {
+                this->previousMaxGradient = this->currentMaxGradient;
+                this->currentMaxGradient = 0;
+
+                randomIndexes = this->randomIndexShuffle();
+                for (int i = 0; i < this->N; i++)
+                {
+                    this->localIteration(randomIndexes[i]);
+                }
+
+                this->computeMu();
+                this->computeResiduals();
+                this->computeTraceError(); // This trace error is with the approximation, as the spectrum changed every iteration
+
+                if (this->R > this->bestError)
+                {
+                    stepsSinceLastImprovement++;
+                    if (stepsSinceLastImprovement == 10)
+                    {
+                        mode = 0;
+                        std::cout << "Local iteration ended, starting global iteration" << std::endl;
+                        // We pick the best result from the local iteration to start the global iteration
+                        this->result->setSpectrum(this->bestSpectrum);
+                        this->result->updateField();
+                    }
+                }
+                else
+                {
+                    this->bestError = this->R;
+                    this->bestSpectrum = this->result->getSpectrum();
+                }
+            }
+            else
+            {
+                this->globalIteration();
+
+                this->computeAmk(this->result->getSpectrum());
+                this->computeSmk(this->result->getField());
+                this->computeSmn();
+                this->computeTmn();
+                this->computeMu();
+                this->computeResiduals();
+                this->computeTraceError();
+
+                if (this->R < this->bestError)
+                {
+                    this->bestError = this->R;
+                    this->bestSpectrum = this->result->getSpectrum();
+                }
+            }
+
+            std::cout << "Iteration = " << nIter + 1 << "\t"
+                      << "R = " << this->R << std::endl;
+
+            nIter++;
+        }
+
+        std::cout << "Best retrieval error R = " << this->bestError << std::endl;
+
+        this->result->setSpectrum(this->bestSpectrum);
+        this->result->updateField();
 
         return *this->result;
     }

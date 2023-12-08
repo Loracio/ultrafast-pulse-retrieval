@@ -221,6 +221,14 @@ public:
     {
         this->R = sqrt(this->r / (this->N * this->N * this->TmeasMaxSquared));
     }
+
+    void setInitialField(const std::vector<std::complex<double>> &initialField){
+        this->result->setField(initialField);
+    }
+
+    void setInitialSpectrum(const std::vector<std::complex<double>> &initialSpectrum){
+        this->result->setSpectrum(initialSpectrum);
+    }
 };
 
 class GPA : public retrieverBase
@@ -329,6 +337,18 @@ private:
 public:
     GPA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
     {
+    }
+
+    GPA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured, std::vector<double> measuredDelays) : retrieverBase(ft, Tmeasured)
+    {
+        // Set up the delays by the given measured delays
+        for (int i = 0; i < this->N; i++) // iterates through delay values
+        {
+            for (int j = 0; j < this->N; j++) // iterates through frequency values
+            {
+                this->delays[i][j] = std::exp(std::complex<double>(0, this->_ft->omega[j] * measuredDelays[i])); // delay in the time domain by τ
+            }
+        }
     }
 
     Pulse retrieve(double tolerance, double maximumIterations)
@@ -662,6 +682,21 @@ public:
         this->bestSpectrum.reserve(this->N);
     }
 
+    COPRA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured, std::vector<double> measuredDelays) : retrieverBase(ft, Tmeasured)
+    {
+        this->gradrmk.resize(this->N, std::vector<std::complex<double>>(this->N));
+        this->bestSpectrum.reserve(this->N);
+
+        // Set up the delays by the given measured delays
+        for (int i = 0; i < this->N; i++) // iterates through delay values
+        {
+            for (int j = 0; j < this->N; j++) // iterates through frequency values
+            {
+                this->delays[i][j] = std::exp(std::complex<double>(0, this->_ft->omega[j] * measuredDelays[i])); // delay in the time domain by τ
+            }
+        }
+    }
+
     Pulse retrieve(double tolerance, double maximumIterations)
     {
         int nIter = 0;
@@ -719,7 +754,7 @@ public:
                         std::cout << "Local iteration ended, starting global iteration" << std::endl;
                         // We pick the best result from the local iteration to start the global iteration
                         this->result->setSpectrum(this->bestSpectrum);
-                        this->result->updateField();
+                        // this->result->updateField();!!Not necesssary, it is updated in setSpectrum
                     }
                 }
                 else
@@ -752,6 +787,18 @@ public:
                       << "R = " << this->R << std::endl;
 
             nIter++;
+        }
+
+        if (mode)
+        { // If the result was achieved in local iteration, compute R as it was shown as an approximated value.
+            this->computeAmk(this->result->getSpectrum());
+            this->computeSmk(this->result->getField());
+            this->computeSmn();
+            this->computeTmn();
+            this->computeMu();
+            this->computeResiduals();
+            this->computeTraceError();
+            this->bestError = this->R;
         }
 
         std::cout << "Best retrieval error R = " << this->bestError << std::endl;

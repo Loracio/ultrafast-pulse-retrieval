@@ -14,13 +14,10 @@
 #include <iostream>
 #include <vector>
 #include <complex>
-#include <chrono>
 
 int main()
 {
-    int N = 2048;
-    // double signalDuration = 10;
-    // double deltaT = signalDuration / N;
+    int N = 256;
     double deltaT = 5e-18;
 
     double t0 = 0;
@@ -28,12 +25,15 @@ int main()
     FourierTransform ft(N, deltaT, t0);
 
     Pulse examplePulse(ft);
-    double TBP = 5.;
+    double TBP = 2.33;
     examplePulse.randomPulse(TBP);
     std::vector<std::vector<double>> Tmeas = examplePulse.getTrace();
 
-    COPRA copraRetriever(ft, Tmeas);
-    Pulse retrievedPulse = copraRetriever.retrieve(1e-16, 300);
+    // Add some noise to the trace
+    std::vector<std::vector<double>> Tnoise = add_noise(Tmeas, N, 0.001);
+
+    COPRA copraRetriever(ft, Tnoise);
+    Pulse retrievedPulse = copraRetriever.retrieve(1e-16, 1500);
     std::vector<std::vector<double>> Tret = retrievedPulse.getTrace();
 
     // Save the trace for checking
@@ -50,7 +50,7 @@ int main()
     {
         for (int j = 0; j < N; j++)
         {
-            fprintf(f, "%lf\t", Tmeas[i][j]);
+            fprintf(f, "%lf\t", Tnoise[i][j]);
         }
     }
 

@@ -283,4 +283,50 @@ std::vector<std::vector<double>> trace(const std::vector<std::complex<double>> &
     return trace_values;
 }
 
+/**
+ * @brief Adds gaussian noise to a trace.
+ *
+ * @param originalTrace 2D vector (NxN) containing the values of the trace without noise.
+ * @param N Number of samples of the trace's pulse.
+ * @param noiseLevel Level of gaussian noise applied to the trace (% of the maximum value).
+ * @return 2D vector (NxN) containing the values of the trace with noise.
+ */
+std::vector<std::vector<double>> add_noise(const std::vector<std::vector<double>> &originalTrace, int N, double noiseLevel)
+{
+    std::vector<std::vector<double>> noisyTrace(N, std::vector<double>(N));
+
+    // Seed for random number generation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    // Calculate standard deviation based on the maximum value
+    double TmeasMax = 0;
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            if (originalTrace[i][j] > TmeasMax)
+            {
+                TmeasMax = originalTrace[i][j];
+            }
+        }
+    }
+
+    double stdDev = noiseLevel * TmeasMax;
+
+    // Distribution for random noise
+    std::normal_distribution<> distribution(0, 1);
+
+    // Add noise to each element in the matrix
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            noisyTrace[i][j] = originalTrace[i][j] + std::abs(stdDev * distribution(gen));
+        }
+    }
+
+    return noisyTrace;
+}
+
 #endif // UTILS_INCLUDED

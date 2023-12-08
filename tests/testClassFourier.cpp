@@ -2,7 +2,6 @@
  * @file testClassFourier.cpp
  * @author Víctor Loras Herrero
  * @brief Small tests to prove that the FourierTransform class is working ok
- * @version 0.1
  * 
  * @copyright Copyright (c) 2023
  * 

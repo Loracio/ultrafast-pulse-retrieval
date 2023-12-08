@@ -18,21 +18,22 @@
 
 int main()
 {
-    int N = 1024;
-    double signalDuration = 10;
-    double deltaT = signalDuration / N;
+    int N = 256;
+    // double signalDuration = 10;
+    // double deltaT = signalDuration / N;
+    double deltaT = 5e-18;
 
     double t0 = 0;
 
     FourierTransform ft(N, deltaT, t0);
 
     Pulse examplePulse(ft);
-    double TBP = 2.25;
+    double TBP = 1.0;
     examplePulse.randomPulse(TBP);
     std::vector<std::vector<double>> Tmeas = examplePulse.getTrace();
 
     GPA gpaRetriever(ft, examplePulse.getTrace());
-    Pulse retrievedPulse = gpaRetriever.retrieve(1e-10, 200);
+    Pulse retrievedPulse = gpaRetriever.retrieve(1e-11, 3000);
     std::vector<std::vector<double>> Tret = retrievedPulse.getTrace();
 
     // Save the trace for checking

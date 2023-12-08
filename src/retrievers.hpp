@@ -1,12 +1,21 @@
-#ifndef RETRIEVERS_INCLUDED
-#define RETRIEVERS_INCLUDED
-
 /**
  * @file retrievers.hpp
  * @author Víctor Loras Herrero
- * @brief Retrieval algorithms for SHG FROG traces
+ * @brief Retriever classes for ultrashort pulse retrieval
+ *
+ * @copyright Copyright (c) 2023
+ *
+ * This module implements some retrieval methods for SHG-FROG traces, including:
+ *      - Generalized Projections Algorithm (GPA)
+ *      - Common Phase Retrieval Algorithm (COPRA)
+ *
+ * Check out Nils C Geib "PyPret" module which inspired this code.
+ * https://pypret.readthedocs.io/en/latest/
  *
  */
+
+#ifndef RETRIEVERS_INCLUDED
+#define RETRIEVERS_INCLUDED
 
 #include <complex>
 #include <vector>
@@ -50,7 +59,7 @@ public:
 
         //! Starting pulse as a random pulse with TBP = 0.5
         this->result = new Pulse(ft);
-        this->result->randomPulse(0.51);
+        this->result->randomPulse(0.5);
 
         this->Tmeas = Tmeasured;
         this->TmeasMaxSquared = 0;
@@ -455,7 +464,7 @@ private:
 
         for (int m = 0; m < this->N; m++)
         {
-            for (int k = 0; k < this->N; ++k)
+            for (int k = 0; k < this->N; k++)
             {
                 dSmkEk[k] = (this->nextSmk[m][k] - this->Smk[m][k]) * std::conj(currentField[k]);
                 dSmkAmk[k] = (this->nextSmk[m][k] - this->Smk[m][k]) * std::conj(this->Amk[m][k]);
@@ -466,8 +475,7 @@ private:
 
             for (int n = 0; n < this->N; n++)
             {
-
-                this->gradZ[n] += this->delays[m][n] * dSmkEk[n] + dSmkAmk[n];
+                this->gradZ[n] += std::conj(this->delays[m][n]) * dSmkEk[n] + dSmkAmk[n];
             }
         }
 
@@ -494,7 +502,7 @@ private:
 
         for (int i = 0; i < this->N; i++)
         {
-            this->gradZ[i] = -4 * M_PI * this->_ft->deltaOmega / (this->_ft->deltaT) * (this->delays[chosenIndex][i] * dSmkEk[i] + dSmkAmk[i]);
+            this->gradZ[i] = -4 * M_PI * this->_ft->deltaOmega / (this->_ft->deltaT) * (std::conj(this->delays[chosenIndex][i]) * dSmkEk[i] + dSmkAmk[i]);
         }
     }
 
@@ -544,7 +552,6 @@ private:
         }
 
         this->result->setSpectrum(currentSpectrum);
-        this->result->updateField();
     }
 
     void localIteration(int randomIndex)
@@ -588,16 +595,14 @@ private:
         this->computeResiduals();
 
         this->computeGradrmk();
-        double gradrmkNorm = this->computeGradrmkNorm();
-        this->etar = this->alpha * this->r / gradrmkNorm;
+        this->etar = this->alpha * this->r / this->computeGradrmkNorm();
 
         this->nextSmkGradDescent();
 
         this->computeZ();
         this->computeGradZ();
 
-        double gradZNorm = this->computeGradZNorm();
-        this->etaz = this->alpha * this->Z / gradZNorm;
+        this->etaz = this->alpha * this->Z / this->computeGradZNorm();
 
         this->computeNextSpectrum(this->etaz, this->gradZ);
     }
@@ -654,6 +659,7 @@ public:
     COPRA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
     {
         this->gradrmk.resize(this->N, std::vector<std::complex<double>>(this->N));
+        this->bestSpectrum.reserve(this->N);
     }
 
     Pulse retrieve(double tolerance, double maximumIterations)
@@ -704,10 +710,10 @@ public:
                 this->computeResiduals();
                 this->computeTraceError(); // This trace error is with the approximation, as the spectrum changed every iteration
 
-                if (this->R > this->bestError)
+                if (this->R >= this->bestError)
                 {
                     stepsSinceLastImprovement++;
-                    if (stepsSinceLastImprovement == 10)
+                    if (stepsSinceLastImprovement == 5)
                     {
                         mode = 0;
                         std::cout << "Local iteration ended, starting global iteration" << std::endl;
@@ -718,6 +724,7 @@ public:
                 }
                 else
                 {
+                    stepsSinceLastImprovement = 0;
                     this->bestError = this->R;
                     this->bestSpectrum = this->result->getSpectrum();
                 }
@@ -750,7 +757,6 @@ public:
         std::cout << "Best retrieval error R = " << this->bestError << std::endl;
 
         this->result->setSpectrum(this->bestSpectrum);
-        this->result->updateField();
 
         return *this->result;
     }

@@ -1,12 +1,12 @@
-#ifndef UTILS_INCLUDED
-#define UTILS_INCLUDED
-
 /**
  * @file utils.hpp
  * @author Víctor Loras Herrero
  * @brief Various auxiliary generic functions used in other modules.
  *
  */
+
+#ifndef UTILS_INCLUDED
+#define UTILS_INCLUDED
 
 #include <cmath>
 #include <numeric>

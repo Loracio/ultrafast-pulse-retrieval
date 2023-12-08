@@ -1,12 +1,19 @@
-#ifndef PULSE_INCLUDED
-#define PULSE_INCLUDED
-
 /**
  * @file pulse.hpp
  * @author Víctor Loras Herrero
- * @brief Pulse class which contains electric field in time domain and in frequency domain, along with other pulse properties
+ * @brief Provides a class to simulate an ultrashort optical pulse using its envelope description.
+ *
+ * @copyright Copyright (c) 2023
+ *
+ * Check out Nils C Geib "PyPret" Pulse module which inspired this code.
+ * https://pypret.readthedocs.io/en/latest/apidoc/pypret.pulse.html
+ * 
+ * ! TODO: this module is not yet properly docummented.
  *
  */
+
+#ifndef PULSE_INCLUDED
+#define PULSE_INCLUDED
 
 #include <iostream>
 #include <complex>
@@ -134,6 +141,23 @@ private:
     double temporalWidth;
 
     std::vector<std::complex<double>> candidateField;
+
+    double objective(double const &factor)
+    {
+
+        std::vector<double> temporalFilter = gaussian(this->_ft->t, this->t0, this->temporalWidth * factor);
+
+        std::vector<std::complex<double>> result(this->N);
+
+        for (int i = 0; i < this->N; i++)
+        {
+            result[i] = this->candidateField[i] * temporalFilter[i];
+        }
+
+        this->setField(result);
+
+        return this->_tbp - this->getTimeBandwidthProduct();
+    }
 
 public:
     Pulse(FourierTransform &ft)
@@ -276,23 +300,6 @@ public:
         }
 
         return trace_values;
-    }
-
-    double objective(double const &factor)
-    {
-
-        std::vector<double> temporalFilter = gaussian(this->_ft->t, this->t0, this->temporalWidth * factor);
-
-        std::vector<std::complex<double>> result(this->N);
-
-        for (int i = 0; i < this->N; i++)
-        {
-            result[i] = this->candidateField[i] * temporalFilter[i];
-        }
-
-        this->setField(result);
-
-        return this->_tbp - this->getTimeBandwidthProduct();
     }
 
     bool randomPulse(double TBP)

@@ -5,13 +5,17 @@
  *
  * @copyright Copyright (c) 2023
  *
+ * This module implements the Fourier transforms on linear grids.
+ * Check out Nils C Geib "PyPret" Fourier module which inspired this code.
+ * https://pypret.readthedocs.io/en/latest/apidoc/pypret.fourier.html
+ *
  * Choosing the Fourier Transform definition as:
  *
- *      Ẽ(ω) = ∫E(t)e^{-i ω t} dt    ;    E(t) = 1/2π ∫Ẽ(ω)e^{i t ω} dω
+ *      Ẽ(ω) = 1/2π ∫E(t)e^{i ω t} dt    ;    E(t) = ∫Ẽ(ω)e^{-i t ω} dω
  *
  * And discretizing it, the nth and the jth coefficient (direct and inverse transforms) will be:
  *
- *      Ẽ(ωₙ) := Ẽₙ = ∑ⱼ₌₀ᴺ⁻¹ E(tⱼ) e^{-i ωₙ tⱼ} Δt    ;     E(tⱼ) := Eⱼ = 1/2π · ∑ₙ₌₀ᴺ⁻¹ Ẽ(ωₙ) e^{i tⱼ ωₙ} Δω
+ *      Ẽ(ωₙ) := Ẽₙ = 1/2π ∑ⱼ₌₀ᴺ⁻¹ E(tⱼ) e^{i ωₙ tⱼ} Δt    ;     E(tⱼ) := Eⱼ = ∑ₙ₌₀ᴺ⁻¹ Ẽ(ωₙ) e^{-i tⱼ ωₙ} Δω
  *
  * Where tⱼ is the jth element of the time array and ωₙ is the nth element of the frequency array.
  *
@@ -24,40 +28,46 @@
  *
  * We can substitute it into the obtained discretized expressions:
  *
- *      Ẽₙ = ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{-i (ω₀ + n·Δω) (t₀ + j·Δt)} Δt =
- *      = Δt e^{-i n t₀ Δω} ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{-i ω₀ tⱼ} e^{-i n j Δω Δt} =
- *      = Δt e^{-i n t₀ Δω} ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{-i ω₀ tⱼ} e^{-i 2π n j / N}
+ *      Ẽₙ = 1/2π ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{i (ω₀ + n·Δω) (t₀ + j·Δt)} Δt =
+ *      = Δt/2π e^{i n t₀ Δω} ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{i ω₀ tⱼ} e^{i n j Δω Δt} =
+ *      = Δt/2π e^{i n t₀ Δω} ∑ⱼ₌₀ᴺ⁻¹ Eⱼ e^{i ω₀ tⱼ} e^{i 2π n j / N}
  *
- *      Eⱼ = 1/2π · ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{i (t₀ + j·Δt) (ω₀ + n·Δω)} Δω =
- *      = Δω/2π e^{i ω₀ tⱼ} ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{i n t₀ Δω} e^{i n j Δt Δω} =
- *      = Δω/2π e^{i ω₀ tⱼ} ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{i n t₀ Δω} e^{i 2π n j / N} =
- *      = 1/Δt e^{i ω₀ tⱼ} · 1/N ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{i n t₀ Δω} e^{i 2π n j / N}
+ *      Eⱼ = ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{-i (t₀ + j·Δt) (ω₀ + n·Δω)} Δω =
+ *      = Δω e^{-i ω₀ tⱼ} ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{-i n t₀ Δω} e^{-i n j Δt Δω} =
+ *      = Δω e^{-i ω₀ tⱼ} ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{-i n t₀ Δω} e^{-i 2π n j / N} =
+ *      = Δω e^{-i ω₀ tⱼ} ∑ₙ₌₀ᴺ⁻¹ Ẽₙ e^{-i n t₀ Δω} e^{-i 2π n j / N}
  *
  * If we define:
  *
- *      rₙ = e^{-i n t₀ Δω} ; sⱼ = e^{-i ω₀ tⱼ}
+ *      rₙ = e^{i n t₀ Δω} ; sⱼ = e^{i ω₀ tⱼ}
  *
  * We can finally express the Discrete Fourier Transform (DFT) as:
  *
- *      Ẽₙ = Δt·rₙ ∑ⱼ₌₀ᴺ⁻¹ Eⱼ·sⱼ e^{-i 2π n j / N}    ;    Eⱼ = 1/Δt·sⱼ* · 1/N ∑ₙ₌₀ᴺ⁻¹ Ẽₙ·rₙ* e^{i 2π n j / N}
+ *      Ẽₙ = Δt/2π · rₙ · ∑ⱼ₌₀ᴺ⁻¹ Eⱼ·sⱼ e^{i 2π n j / N}    ;    Eⱼ = Δω · sⱼ* · ∑ₙ₌₀ᴺ⁻¹ Ẽₙ·rₙ* e^{-i 2π n j / N}
  *
  * So we can denote:
  *
- *      DFTₙ = ∑ⱼ₌₀ᴺ⁻¹ Eⱼ' e^{-i 2π n j / N}    ;    IDFTⱼ = 1/N ∑ₙ₌₀ᴺ⁻¹ Ẽₙ' e^{i 2π n j / N}
+ *      DFTₙ = ∑ⱼ₌₀ᴺ⁻¹ Eⱼ' e^{i 2π n j / N}    ;    IDFTⱼ = ∑ₙ₌₀ᴺ⁻¹ Ẽₙ' e^{-i 2π n j / N}
  *
  * (Where Eⱼ' = Eⱼ·sⱼ and Ẽₙ' = Ẽₙ·rₙ*)
+ * So this definitions match the ones used in the fftw3 library for the forward and inverse transform.
+ * Note that our forward transform matches the backwards transform in fftw3 and vice versa.
+ * Also, remember that ifft in fftw3 does not have the 1/N amplitude factor.
  *
  *
  * Therefore, we can use the fast Fourier transform to compute the coefficients, yielding the following expressions:
  *
- *      Ẽₙ = Δt·rₙ fft(Eⱼ·sⱼ)    ;    Eⱼ = 1/Δt·sⱼ* · ifft(Ẽₙ·rₙ*)
+ *      Ẽₙ = Δt/2π · rₙ · ifft(Eⱼ·sⱼ)    ;    Eⱼ = Δω · sⱼ* · fft(Ẽₙ·rₙ*)
  *
- * And we don't have to worry about shifting the result.
+ * And we don't have to worry about shifting the result of the fft.
  *
  * We should consider the Nyquist sampling theorem, which states that to avoid aliasing effects, we should discard all
  * frequencies higher than half the sampling frequency, given by fₘ = 1 / Δt. Thus, the frequency array should be
  * evenly spaced between -ωₘ/2 = -π/Δt and ωₘ/2 = π/Δt with Δω = 2π/(NΔt). If the frequency array does not meet this
  * relationship, we will have problems when switching between domains.
+ *
+ * Once again, check the Fourier module in PyPret for a more detailed discussion.
+ * https://pypret.readthedocs.io/en/latest/apidoc/pypret.fourier.html
  */
 
 #ifndef FOURIER_INCLUDED
@@ -78,8 +88,6 @@
  * so this class manages to mantain one of these plans to make efficient computations with the
  * matching phase factors given by the time and frequency arrays.
  *
- * If you do not care about speed or not going to do a lot of transforms, you can use DFT and IDFT
- * functions instead.
  */
 class FourierTransform
 {
@@ -101,7 +109,13 @@ public:
     std::vector<double> omega;                // Angular frequency vector
     std::vector<std::complex<double>> result; // Array that stores the last result obtained
 
-    // Constructor
+    /**
+     * \brief Class constructor for a FourierTransform object.
+     *
+     * \param nSamples Number of samples of the vector to compute its transforms.
+     * \param dt Grid spacing in the time domain of the given vector.
+     * \param t0 Starting time of the time array in which the complex vector is defined.
+     */
     FourierTransform(int nSamples, double dt, double t0)
     {
         this->N = nSamples;
@@ -121,11 +135,12 @@ public:
         // Compute r_n factors
         r_n.resize(N);
         r_n_conj.resize(N);
+        // If starting time is zero, the phase factors are easier to compute.
         if (t[0] == 0.0)
         {
             for (int i = 0; i < N; i++)
             {
-                r_n[i] = deltaT;
+                r_n[i] = this->deltaT / (2 * M_PI); // We include here the amplitude factor in the forward transform for computational efficiency
                 r_n_conj[i] = 1;
             }
         }
@@ -134,30 +149,29 @@ public:
             double constFactor = t[0] * deltaOmega;
             for (int i = 0; i < N; i++)
             {
-                r_n[i] = deltaT * std::exp(std::complex<double>(0, -i * constFactor));
-                r_n_conj[i] = std::exp(std::complex<double>(0, i * constFactor));
+                r_n[i] = this->deltaT / (2 * M_PI) * std::exp(std::complex<double>(0, i * constFactor));
+                r_n_conj[i] = std::exp(std::complex<double>(0, -i * constFactor));
             }
         }
 
         // Compute s_j factors
         s_j.resize(N);
         s_j_conj.resize(N);
+        // If central frequency is zero, the phase factors are easier to compute.
         if (omega[0] == 0.0)
-        {   
-            double constFactor = 1 / (N * deltaT);
+        {
             for (int i = 0; i < N; i++)
             {
                 s_j[i] = 1;
-                s_j_conj[i] = constFactor;
+                s_j_conj[i] = this->deltaOmega; // We include here the amplitude factor in the backward transform for computational efficiency
             }
         }
         else
         {
-            double normFactor = 1 / (N * deltaT);
             for (int i = 0; i < N; i++)
             {
-                s_j[i] = std::exp(std::complex<double>(0, -t[i] * omega[0]));
-                s_j_conj[i] = std::exp(std::complex<double>(0, t[i] * omega[0])) * normFactor;
+                s_j[i] = std::exp(std::complex<double>(0, t[i] * omega[0]));
+                s_j_conj[i] = this->deltaOmega * std::exp(std::complex<double>(0, -t[i] * omega[0]));
             }
         }
 
@@ -179,7 +193,12 @@ public:
         fftw_destroy_plan(backwardPlan);
     }
 
-    // Perform forward transform
+    /**
+     * \brief Computes the Discrete Fourier Transform (DFT) of a dataset.
+     *
+     * \param x The vector representing the complex valued dataset.
+     * \return The vector representing the DFT of the dataset.
+     */
     std::vector<std::complex<double>> forwardTransform(const std::vector<std::complex<double>> &x)
     {
         std::vector<std::complex<double>> x_sj(N);
@@ -198,7 +217,7 @@ public:
         }
 
         // Execute the forward transform
-        fftw_execute_dft(forwardPlan, in, out);
+        fftw_execute_dft(backwardPlan, in, out);
 
         // Process the output with the necessary factors
         for (int i = 0; i < N; i++)
@@ -209,7 +228,12 @@ public:
         return result;
     }
 
-    // Perform backward transform
+    /**
+     * \brief Computes the Inverse Discrete Fourier Transform (IDFT) of a dataset.
+     *
+     * \param x The vector representing the complex valued dataset.
+     * \return The vector representing the IDFT of the dataset.
+     */
     std::vector<std::complex<double>> backwardTransform(const std::vector<std::complex<double>> &x)
     {
         std::vector<std::complex<double>> x_rn(N);
@@ -225,7 +249,7 @@ public:
         }
 
         // Execute the backward transform
-        fftw_execute_dft(backwardPlan, in, out);
+        fftw_execute_dft(forwardPlan, in, out);
 
         // Process the output with the necessary factors
         for (int i = 0; i < N; i++)
@@ -236,184 +260,6 @@ public:
         return result;
     }
 };
-
-/**
- * \brief Computes the Discrete Fourier Transform (DFT) of a dataset.
- *
- * This function calculates the DFT of a dataset represented by the vectors `x` and its timestamps `t`,
- * given the time step `deltaT`, angular frequency `omega`, and frequency step `deltaOmega`.
- *
- * \param x The vector representing the complex valued dataset.
- * \param t The vector of time values.
- * \param deltaT The time step.
- * \param omega The vector of angular frequencies.
- * \param deltaOmega The angular frequency step.
- * \return The vector representing the DFT of the dataset.
- */
-std::vector<std::complex<double>> DFT(const std::vector<std::complex<double>> &x, const std::vector<double> &t, double deltaT, const std::vector<double> &omega, double deltaOmega)
-{
-
-    int N = t.size();
-
-    std::vector<std::complex<double>> r_n(N);
-    std::vector<std::complex<double>> s_j(N);
-
-    if (t[0] == 0.0)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            r_n[i] = 1;
-        }
-    }
-    else
-    {
-
-        for (int i = 0; i < N; i++)
-        {
-            r_n[i] = std::exp(std::complex<double>(0, -i * t[0] * deltaOmega));
-        }
-    }
-
-    if (omega[0] == 0.0)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            s_j[i] = 1;
-        }
-    }
-    else
-    {
-
-        for (int i = 0; i < N; i++)
-        {
-            s_j[i] = std::exp(std::complex<double>(0, -t[i] * omega[0]));
-        }
-    }
-
-    std::vector<std::complex<double>> x_sj(N);
-
-    for (int i = 0; i < N; i++)
-    {
-        x_sj[i] = x[i] * s_j[i];
-    }
-
-    // Initialize FFTW and create the plan
-    fftw_complex *in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_plan plan = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-
-    // Prepare the input data
-    for (int i = 0; i < N; ++i)
-    {
-        in[i][0] = std::real(x_sj[i]); // Real part of the input
-        in[i][1] = std::imag(x_sj[i]); // Imaginary part of the input
-    }
-
-    // Execute the FFT
-    fftw_execute(plan);
-
-    // Process the output with the necessary factors
-    std::vector<std::complex<double>> result(N);
-    for (int i = 0; i < N; ++i)
-    {
-        result[i] = deltaT * r_n[i] * std::complex<double>(out[i][0], out[i][1]); // Extract the complex output
-    }
-
-    // Clean up and free resources
-    fftw_destroy_plan(plan);
-    fftw_free(in);
-    fftw_free(out);
-
-    return result;
-}
-
-/**
- * \brief Computes the Inverse Discrete Fourier Transform (IDFT) of a dataset.
- *
- * This function calculates the IDFT of a dataset represented by the vectors `x` and its timestamps `t`,
- * given the time step `deltaT`, angular frequency `omega`, and frequency step `deltaOmega`.
- *
- * \param x The vector representing the complex valued dataset.
- * \param t The vector of time values.
- * \param deltaT The time step.
- * \param omega The vector of angular frequencies.
- * \param deltaOmega The angular frequency step.
- * \return The vector representing the IDFT of the dataset.
- */
-std::vector<std::complex<double>> IDFT(const std::vector<std::complex<double>> &x, const std::vector<double> &t, double deltaT, const std::vector<double> &omega, double deltaOmega)
-{
-
-    int N = t.size();
-
-    std::vector<std::complex<double>> r_n_conj(N);
-    std::vector<std::complex<double>> s_j_conj(N);
-
-    if (t[0] == 0.0)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            r_n_conj[i] = 1;
-        }
-    }
-    else
-    {
-        for (int i = 0; i < N; i++)
-        {
-            r_n_conj[i] = std::exp(std::complex<double>(0, i * t[0] * deltaOmega));
-        }
-    }
-
-    if (omega[0] == 0.0)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            s_j_conj[i] = 1;
-        }
-    }
-    else
-    {
-        for (int i = 0; i < N; i++)
-        {
-            s_j_conj[i] = std::exp(std::complex<double>(0, t[i] * omega[0]));
-        }
-    }
-
-    std::vector<std::complex<double>> x_rn(N);
-
-    for (int i = 0; i < N; i++)
-    {
-        x_rn[i] = x[i] * r_n_conj[i];
-    }
-
-    // Initialize FFTW and create the plan
-    fftw_complex *in = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_complex *out = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_plan plan = fftw_plan_dft_1d(N, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
-
-    // Prepare the input data
-    for (int i = 0; i < N; ++i)
-    {
-        in[i][0] = std::real(x_rn[i]); // Real part of the input
-        in[i][1] = std::imag(x_rn[i]); // Imaginary part of the input
-    }
-
-    // Execute the FFT
-    fftw_execute(plan);
-
-    // Process the output with the necessary factors
-    std::vector<std::complex<double>> result(N);
-    for (int i = 0; i < N; ++i)
-    {
-        result[i] = s_j_conj[i] / (N * deltaT) * std::complex<double>(out[i][0], out[i][1]); // Extract the complex output
-    }
-
-    // Clean up and free resources
-    fftw_destroy_plan(plan);
-    fftw_free(in);
-    fftw_free(out);
-
-    return result;
-}
 
 /**
  * Generate the frequency array for the discrete Fourier transform (DFT).

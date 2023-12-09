@@ -132,8 +132,6 @@ private:
     std::vector<std::complex<double>> _field;
     std::vector<std::complex<double>> _spectrum;
 
-    int N;
-
     // Random pulse generation variables
     double _tbp;
     double t0;
@@ -160,6 +158,8 @@ private:
     }
 
 public:
+    int N;
+    
     Pulse(FourierTransform &ft)
     {
         this->_ft = &ft;

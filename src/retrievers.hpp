@@ -48,6 +48,8 @@ public:
     double R;         // Trace error
     double bestError; // Best achieved trace error
 
+    std::vector<double> allTraceErrors; // This will store al retrieval errors during the retrieval process. 
+
     double Z;                                // Sum of difference between the signal operators in the frequency domain
     std::vector<std::complex<double>> gradZ; // Stores the value of the gradient of Z
     double gamma;                            // Gradient descent step
@@ -185,7 +187,7 @@ public:
             for (int j = 0; j < this->N; j++)
             {
                 sum_meas_candidate += this->Tmeas[i][j] * this->Tmn[i][j];
-                sum_meas += this->Tmeas[i][j] * this->Tmeas[i][j];
+                sum_meas += this->Tmn[i][j] * this->Tmn[i][j];
             }
         }
 
@@ -222,11 +224,13 @@ public:
         this->R = sqrt(this->r / (this->N * this->N * this->TmeasMaxSquared));
     }
 
-    void setInitialField(const std::vector<std::complex<double>> &initialField){
+    void setInitialField(const std::vector<std::complex<double>> &initialField)
+    {
         this->result->setField(initialField);
     }
 
-    void setInitialSpectrum(const std::vector<std::complex<double>> &initialSpectrum){
+    void setInitialSpectrum(const std::vector<std::complex<double>> &initialSpectrum)
+    {
         this->result->setSpectrum(initialSpectrum);
     }
 };
@@ -363,6 +367,7 @@ public:
         this->computeMu();
         this->computeResiduals();
         this->computeTraceError();
+        this->allTraceErrors.push_back(this->R);
 
         while (this->R > tolerance && nIter < maximumIterations)
         {
@@ -381,6 +386,7 @@ public:
             this->computeMu();
             this->computeResiduals();
             this->computeTraceError();
+            this->allTraceErrors.push_back(this->R);
 
             if (this->R < this->bestError)
             {
@@ -398,6 +404,8 @@ public:
 
         this->result->setField(this->bestField);
         this->result->updateSpectrum();
+
+        this->allTraceErrors.push_back(this->bestError); //! The last value of the array is the best result. Not the last retrieval result.
 
         return *this->result;
     }
@@ -713,6 +721,7 @@ public:
         this->computeMu();
         this->computeResiduals();
         this->computeTraceError();
+        this->allTraceErrors.push_back(this->R);
 
         this->computeNextSmk();
         this->currentMaxGradient = 0;
@@ -744,6 +753,7 @@ public:
                 this->computeMu();
                 this->computeResiduals();
                 this->computeTraceError(); // This trace error is with the approximation, as the spectrum changed every iteration
+                this->allTraceErrors.push_back(this->R);
 
                 if (this->R >= this->bestError)
                 {
@@ -775,6 +785,7 @@ public:
                 this->computeMu();
                 this->computeResiduals();
                 this->computeTraceError();
+                this->allTraceErrors.push_back(this->R);
 
                 if (this->R < this->bestError)
                 {
@@ -789,6 +800,7 @@ public:
             nIter++;
         }
 
+        this->result->setSpectrum(this->bestSpectrum);
         if (mode)
         { // If the result was achieved in local iteration, compute R as it was shown as an approximated value.
             this->computeAmk(this->result->getSpectrum());
@@ -799,11 +811,12 @@ public:
             this->computeResiduals();
             this->computeTraceError();
             this->bestError = this->R;
+            std::cout << "Best retrieval error found in local iteration" << std::endl;
         }
 
         std::cout << "Best retrieval error R = " << this->bestError << std::endl;
 
-        this->result->setSpectrum(this->bestSpectrum);
+        this->allTraceErrors.push_back(this->bestError); //! Last stored value is the best result, not the last computed error!
 
         return *this->result;
     }

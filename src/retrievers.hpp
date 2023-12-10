@@ -7,6 +7,7 @@
  *
  * This module implements some retrieval methods for SHG-FROG traces, including:
  *      - Generalized Projections Algorithm (GPA)
+ *      - Ptycographic Iterative Engine (PIE)
  *      - Common Phase Retrieval Algorithm (COPRA)
  *
  * Check out Nils C Geib "PyPret" module which inspired this code.
@@ -48,7 +49,7 @@ public:
     double R;         // Trace error
     double bestError; // Best achieved trace error
 
-    std::vector<double> allTraceErrors; // This will store al retrieval errors during the retrieval process. 
+    std::vector<double> allTraceErrors; // This will store al retrieval errors during the retrieval process.
 
     double Z;                                // Sum of difference between the signal operators in the frequency domain
     std::vector<std::complex<double>> gradZ; // Stores the value of the gradient of Z
@@ -378,6 +379,193 @@ public:
             this->computeGamma();
 
             this->computeNextField();
+
+            this->computeAmk(this->result->getSpectrum());
+            this->computeSmk(this->result->getField());
+            this->computeSmn();
+            this->computeTmn();
+            this->computeMu();
+            this->computeResiduals();
+            this->computeTraceError();
+            this->allTraceErrors.push_back(this->R);
+
+            if (this->R < this->bestError)
+            {
+                this->bestError = this->R;
+                this->bestField = this->result->getField();
+            }
+
+            std::cout << "Iteration = " << nIter + 1 << "\t"
+                      << "R = " << this->R << std::endl;
+
+            nIter++;
+        }
+
+        std::cout << "Best retrieval error R = " << this->bestError << std::endl;
+
+        this->result->setField(this->bestField);
+        this->result->updateSpectrum();
+
+        this->allTraceErrors.push_back(this->bestError); //! The last value of the array is the best result. Not the last retrieval result.
+
+        return *this->result;
+    }
+};
+
+class PIE : public retrieverBase
+{
+private:
+    std::vector<std::complex<double>> bestField; // Result of the best field for retrieval
+
+    void computeNextSmk()
+    {
+        std::vector<std::vector<double>> absSmn(this->N, std::vector<double>(this->N));
+        for (int i = 0; i < this->N; ++i)
+        {
+            for (int j = 0; j < this->N; ++j)
+            {
+                absSmn[i][j] = std::abs(this->Smn[i][j]);
+            }
+        }
+
+        std::vector<std::complex<double>> nextSmn(this->N);
+        for (int i = 0; i < this->N; ++i)
+        {
+            for (int j = 0; j < this->N; ++j)
+            {
+                if (absSmn[i][j] > 0.0)
+                {
+                    nextSmn[j] = this->Smn[i][j] / absSmn[i][j] * sqrt(this->Tmeas[i][j] / this->mu);
+                }
+                else
+                {
+                    nextSmn[j] = sqrt(this->Tmeas[i][j] / this->mu);
+                }
+            }
+
+            this->nextSmk[i] = this->_ft->backwardTransform(nextSmn);
+        }
+    }
+
+    void computeNextSmk(int randomIndex)
+    {
+        std::vector<double> absSmn(this->N);
+        for (int j = 0; j < this->N; ++j)
+        {
+            absSmn[j] = std::abs(this->Smn[randomIndex][j]);
+        }
+
+        std::vector<std::complex<double>> nextSmn(this->N);
+        for (int j = 0; j < this->N; ++j)
+        {
+            if (absSmn[j] > 0.0)
+            {
+                nextSmn[j] = this->Smn[randomIndex][j] / absSmn[j] * sqrt(this->Tmeas[randomIndex][j] / this->mu);
+            }
+            else
+            {
+                nextSmn[j] = sqrt(this->Tmeas[randomIndex][j] / this->mu);
+            }
+        }
+
+        this->nextSmk[randomIndex] = this->_ft->backwardTransform(nextSmn);
+    }
+
+    void computeNextField(int randomIndex, double beta)
+    {
+        this->computeAmk(this->result->getSpectrum(), randomIndex);
+        this->computeSmk(this->result->getField(), randomIndex);
+        this->computeSmn(randomIndex);
+        this->computeTmn(randomIndex);
+
+        // Compute projection on Smk
+        this->computeNextSmk(randomIndex);
+
+        std::vector<std::complex<double>> currentField = this->result->getField();
+
+        double currentAbsMaxValue = 0;
+        double absValue;
+
+        currentAbsMaxValue = 0;
+        for (int j = 0; j < this->N; j++)
+        {
+            absValue = std::norm(currentField[j]);
+            if (currentAbsMaxValue < absValue)
+            {
+                currentAbsMaxValue = absValue;
+            }
+        }
+
+        for (int j = 0; j < this->N; j++)
+        {
+            currentField[j] += beta * std::conj(this->Amk[randomIndex][j]) * (this->nextSmk[randomIndex][j] - this->Smk[randomIndex][j]) / currentAbsMaxValue;
+        }
+
+        this->result->setField(currentField);
+    }
+
+    std::vector<int> randomIndexShuffle()
+    {
+        std::vector<int> indices(this->N);
+        std::random_device rd;
+        std::mt19937 rng(rd());
+
+        std::iota(indices.begin(), indices.end(), 0); // Fill indices with 0, 1, ..., N-1
+
+        // Shuffle the array of indices
+        std::shuffle(indices.begin(), indices.end(), rng);
+
+        return indices;
+    }
+
+public:
+    PIE(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured) : retrieverBase(ft, Tmeasured)
+    {
+    }
+
+    PIE(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured, std::vector<double> measuredDelays) : retrieverBase(ft, Tmeasured)
+    {
+        // Set up the delays by the given measured delays
+        for (int i = 0; i < this->N; i++) // iterates through delay values
+        {
+            for (int j = 0; j < this->N; j++) // iterates through frequency values
+            {
+                this->delays[i][j] = std::exp(std::complex<double>(0, this->_ft->omega[j] * measuredDelays[i])); // delay in the time domain by τ
+            }
+        }
+    }
+
+    Pulse retrieve(double tolerance, double maximumIterations)
+    {
+
+        int nIter = 0;
+        this->bestError = std::numeric_limits<double>::infinity();
+        this->computeAmk(this->result->getSpectrum());
+        this->computeSmk(this->result->getField());
+        this->computeSmn();
+        this->computeTmn();
+        this->computeMu();
+        this->computeResiduals();
+        this->computeTraceError();
+        this->allTraceErrors.push_back(this->R);
+
+        std::vector<int> randomIndexes;
+
+        // Set up a random number generator for beta
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> distribution(0.1, 0.5);
+
+        double beta;
+
+        while (this->R > tolerance && nIter < maximumIterations)
+        {
+            randomIndexes = this->randomIndexShuffle();
+            beta = distribution(gen);
+            for (int i = 0; i < this->N; i++)
+            {
+                this->computeNextField(randomIndexes[i], beta);
+            }
 
             this->computeAmk(this->result->getSpectrum());
             this->computeSmk(this->result->getField());

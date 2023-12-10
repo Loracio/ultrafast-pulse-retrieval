@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Configuration parameters and measurements
-N=128
-centralWaveLength=790                                               # Central wavelength in nanometers
-axisFilename="./tests/expResults/axis_non_compressed_pulse.csv"         # Filename of the axis of the trace (1st column: angular frequencies, 2nd column: delays)
+N=128                                                                    # Number of samples
+centralWaveLength=790                                                    # Central wavelength in nanometers
+axisFilename="./tests/expResults/axis_non_compressed_pulse.csv"          # Filename of the axis of the trace (1st column: angular frequencies, 2nd column: delays)
 traceFilename="./tests/expResults/non_compressed_pulse_2100mA_trace.csv" # Numerical values of the trace (N rows with N columns)
 
 # Retriever parameters
-retriever="COPRA"      # Selects a switch between 'COPRA', 'GPA'
+retriever="COPRA"      # Selects a switch between 'COPRA', 'GPA' or 'PIE'
 maximumIterations=2000 # Maximum number of iterations for the retrieval
 tolerance=1e-16        # Tolerance of the trace error (R)
 
@@ -25,6 +25,11 @@ resultingErrorsFilename="./tests/expResults/retrievedErrors.txt"
 
 # Launching the compiled program
 ./retrieveExpResults.o $N $axisFilename $traceFilename $retriever $maximumIterations $tolerance $initialCandidateField $initialCandidateSpectrum $resultingFieldFilename $resultingSpectrumFilename $resultingTraceFilename $resultingErrorsFilename
+
+# If the cpp program does not return 0 something went wrong
+if [ $? -ne 0 ]; then
+    exit 1
+fi
 
 #! Depends on where the python instalation is in your system
 ~/.conda/envs/defenv/bin/python ./tests/expResults/plotExpResults.py $N $axisFilename $traceFilename $resultingFieldFilename $resultingSpectrumFilename $resultingTraceFilename $resultingErrorsFilename $centralWaveLength

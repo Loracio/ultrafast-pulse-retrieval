@@ -90,9 +90,16 @@ int main(int argc, char *argv[])
         // Save the result
         writeResults(retrievedPulse, resultingFieldFilename, resultingSpectrumFilename, resultingTraceFilename, resultingErrorsFilename, selectedRetriever.allTraceErrors);
     }
+    else if (retrieverStr == "PIE")
+    {
+        PIE selectedRetriever(ft, Tmeas, delays);
+        Pulse retrievedPulse = selectedRetriever.retrieve(tolerance, maximumIterations);
+        // Save the result
+        writeResults(retrievedPulse, resultingFieldFilename, resultingSpectrumFilename, resultingTraceFilename, resultingErrorsFilename, selectedRetriever.allTraceErrors);
+    }
     else
     {
-        std::cerr << "Invalid retriever. Choose between 'COPRA' and 'GPA'." << std::endl;
+        std::cerr << "Invalid retriever. Choose between 'COPRA', 'GPA' or 'PIE." << std::endl;
         return 1;
     }
 

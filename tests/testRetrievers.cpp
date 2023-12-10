@@ -30,22 +30,6 @@ int main(int argc, char *argv[])
     }
 
     // Parse command line arguments
-    std::cout << argv[1] << std::endl;
-    std::cout << argv[2] << std::endl;
-    std::cout << argv[3] << std::endl;
-    std::cout << argv[4] << std::endl;
-    std::cout << argv[5] << std::endl;
-    std::cout << argv[6] << std::endl;
-    std::cout << argv[7] << std::endl;
-    std::cout << argv[8] << std::endl;
-    std::cout << argv[9] << std::endl;
-    std::cout << argv[10] << std::endl;
-    std::cout << argv[11] << std::endl;
-    std::cout << argv[12] << std::endl;
-    std::cout << argv[13] << std::endl;
-    std::cout << argv[14] << std::endl;
-    std::cout << argv[15] << std::endl;
-    std::cout << argv[16] << std::endl;
     int N = std::stoi(argv[1]);
 
     double deltaT = std::stod(argv[2]);
@@ -109,9 +93,17 @@ int main(int argc, char *argv[])
         writeOriginalPulse(originalPulse, originalFieldFilename, originalSpectrumFilename, originalTraceFilename, Tmeas);
         writeResults(retrievedPulse, resultingFieldFilename, resultingSpectrumFilename, resultingTraceFilename, resultingErrorsFilename, selectedRetriever.allTraceErrors);
     }
+    else if (retrieverStr == "PIE")
+    {
+        PIE selectedRetriever(ft, Tmeas);
+        Pulse retrievedPulse = selectedRetriever.retrieve(tolerance, maximumIterations);
+        // Save the result
+        writeOriginalPulse(originalPulse, originalFieldFilename, originalSpectrumFilename, originalTraceFilename, Tmeas);
+        writeResults(retrievedPulse, resultingFieldFilename, resultingSpectrumFilename, resultingTraceFilename, resultingErrorsFilename, selectedRetriever.allTraceErrors);
+    }
     else
     {
-        std::cerr << "Invalid retriever. Choose between 'COPRA' and 'GPA'." << std::endl;
+        std::cerr << "Invalid retriever. Choose between 'COPRA', 'GPA' or 'PCGPA." << std::endl;
         return 1;
     }
 

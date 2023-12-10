@@ -38,6 +38,7 @@ def readTrace(filename):
         print(f"File '{filename}' not found.")
         return np.array([])
 
+
 def readErrors(filename):
     try:
         with open(filename, 'r') as file:
@@ -53,8 +54,10 @@ def readErrors(filename):
         print(f"File '{filename}' not found.")
         return np.array([])
 
+
 def meanValue(x, y):
     return np.sum(x * y) / np.sum(y)
+
 
 def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tmeas, Tretrieved, omegas, delays, centralWavelength, R):
     fig, ax = plt.subplots(2, 2)
@@ -86,20 +89,23 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
     # spectralPhase = np.where(spectralIntensity < 1e-3, np.nan, spectralPhase) # Phase blanking
 
     originalSpectralPhase = np.unwrap(np.angle(spectrum))
-    originalSpectralPhase -= meanValue(originalSpectralPhase, originalSpectralIntensity)
+    originalSpectralPhase -= meanValue(originalSpectralPhase,
+                                       originalSpectralIntensity)
     # originalSpectralPhase = np.where(originalSpectralIntensity < 1e-3, np.nan, originalSpectralPhase) # Phase blanking
 
     #! Roll temporal intensity (and its phase) so that its maximum lays in the middle
     shift_amount = N // 2 - np.argmax(fieldIntensity)
 
-    ax[0][0].plot(delays, originalFieldIntensity, linewidth=2, color='orange',
-                  label='Original intensity')
-    twin_ax00.plot(delays, originalFieldPhase, '-.', linewidth=2, color='violet')
-    ax[0][0].plot(np.nan, '-.', label='Original phase', color='violet')
+    ax[0][0].plot(delays, originalFieldIntensity, linewidth=5, color='orange',
+                  alpha=0.6, label='Original intensity')
+    twin_ax00.plot(delays, originalFieldPhase, '-',
+                   linewidth=5, alpha=0.6, color='violet')
+    ax[0][0].plot(np.nan, '-', label='Original phase', color='violet')
 
-    ax[0][0].plot(delays, np.roll(fieldIntensity, shift_amount), color='blue',
+    ax[0][0].plot(delays, np.roll(fieldIntensity, shift_amount), '-', color='blue',
                   label='Retrieved intensity')
-    twin_ax00.plot(delays, np.roll(fieldPhase, shift_amount), '-.', color='red')
+    twin_ax00.plot(delays, np.roll(fieldPhase, shift_amount),
+                   '-.', color='red')
     ax[0][0].plot(np.nan, '-.', label='Retrieved phase', color='red')
 
     ax[0][0].set_xlabel("Time (fs)")
@@ -116,14 +122,14 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
     twin_ax00.yaxis.label.set_color('red')
 
     ax[0][1].plot(2 * np.pi * 300 / (2 * np.pi * 300 / centralWavelength + omegas),
-                  originalSpectralIntensity, linewidth=2, color='orange', label='Original spectral intensity')
+                  originalSpectralIntensity, linewidth=5, alpha=0.6, color='orange', label='Original spectral intensity')
     twin_ax01.plot(2 * np.pi * 300 / (2 * np.pi * 300 /
-                   centralWavelength + omegas), originalSpectralPhase, '-.', color='violet')
-    ax[0][1].plot(np.nan, '-.', linewidth=2, label='Original spectral phase', color='violet')
-
+                   centralWavelength + omegas), originalSpectralPhase, '-', linewidth=5, color='violet')
+    ax[0][1].plot(np.nan, '-', alpha=0.6,
+                  label='Original spectral phase', color='violet')
 
     ax[0][1].plot(2 * np.pi * 300 / (2 * np.pi * 300 / centralWavelength + omegas),
-                  spectralIntensity, color='blue', label='Retrieved spectral intensity')
+                  spectralIntensity, '-', color='blue', label='Retrieved spectral intensity')
     twin_ax01.plot(2 * np.pi * 300 / (2 * np.pi * 300 /
                    centralWavelength + omegas), spectralPhase, '-.', color='red')
     ax[0][1].plot(np.nan, '-.', label='Retrieved spectral phase', color='red')
@@ -165,11 +171,12 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
         coefficient = value / 10**exponent
         formatted_str = f"${coefficient:.{precision}f} \\times 10^{{{exponent}}}$"
         return formatted_str
-        
 
-    ax[1][1].set_title(fr"Retrieved trace, R = {format_scientific_notation(R)}")
+    ax[1][1].set_title(
+        fr"Retrieved trace, R = {format_scientific_notation(R)}")
 
     return fig, ax
+
 
 def plotErrorEvolution(errors):
     fig, ax = plt.subplots()
@@ -184,6 +191,7 @@ def plotErrorEvolution(errors):
     ax.grid()
 
     return fig, ax
+
 
 if __name__ == '__main__':
 
@@ -206,11 +214,13 @@ if __name__ == '__main__':
     deltaT = float(sys.argv[10])
 
     deltaOmega = 2 * np.pi / (N * deltaT)
-    measuredOmegas = np.array([-np.pi / deltaT + i * deltaOmega for i in range(N)])
-    measuredDelays = np.array([(i - np.floor(0.5 * N)) * deltaT for i in range(N)])
+    measuredOmegas = np.array(
+        [-np.pi / deltaT + i * deltaOmega for i in range(N)])
+    measuredDelays = np.array(
+        [(i - np.floor(0.5 * N)) * deltaT for i in range(N)])
 
-    originalField = readResult(originalFieldFilename)    
-    originalSpectrum = readResult(originalSpectrumFilename)    
+    originalField = readResult(originalFieldFilename)
+    originalSpectrum = readResult(originalSpectrumFilename)
     originalTrace = readTrace(originalTraceFilename)
 
     retrievedField = readResult(resultingFieldFilename)
@@ -218,11 +228,10 @@ if __name__ == '__main__':
     retrievedTrace = readTrace(resultingTraceFilename)
     retrievedErrors = readErrors(resultingErrorFilename)
 
-
-    figError, axError = plotErrorEvolution(retrievedErrors[:-1]) #! All except the last one, which is the best retrieved error
+    # ! All except the last one, which is the best retrieved error
+    figError, axError = plotErrorEvolution(retrievedErrors[:-1])
 
     fig, ax = plotRetrievalResult(N, originalField, originalSpectrum, retrievedField, retrievedSpectrum,
                                   originalTrace, retrievedTrace, measuredOmegas, measuredDelays, centralWavelength, retrievedErrors[-1])
-    
 
     plt.show()

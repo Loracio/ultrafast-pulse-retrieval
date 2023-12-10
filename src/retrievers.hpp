@@ -12,6 +12,8 @@
  *
  * Check out Nils C Geib "PyPret" module which inspired this code.
  * https://pypret.readthedocs.io/en/latest/
+ * 
+ * ! This file is not fully documented yet.
  *
  */
 

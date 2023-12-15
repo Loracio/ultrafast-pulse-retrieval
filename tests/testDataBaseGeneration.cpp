@@ -34,11 +34,11 @@ int main()
     std::vector<std::complex<double>> field;
 
     // DB parameters
-    int numberOfPulses = 10000;
+    int numberOfPulses = 1000;
 
     double initialTBP = 0.51;
-    double finalTBP = 0.81;
-    double stepTBP = 0.10;
+    double finalTBP = 0.785;
+    double stepTBP = 0.025;
 
     int intervals = (finalTBP - initialTBP) / stepTBP;
     int pulsesPerTBP = numberOfPulses / intervals;

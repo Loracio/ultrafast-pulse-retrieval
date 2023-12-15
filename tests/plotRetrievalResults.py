@@ -154,14 +154,14 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
     TretrievedNormalized = Tretrieved / np.max(Tretrieved)
 
     im0 = ax[1][0].pcolormesh(2 * np.pi * 300 / centralWavelength +
-                              omegas, delays, TmeasNormalized, cmap='YlGnBu_r')
+                              omegas, delays, TmeasNormalized, cmap='nipy_spectral')
     fig.colorbar(im0, ax=ax[1][0])
     ax[1][0].set_xlabel("ω (2π/fs)")
     ax[1][0].set_ylabel("τ (fs)")
     ax[1][0].set_title("Measured trace")
 
     im1 = ax[1][1].pcolormesh(2 * np.pi * 300 / centralWavelength +
-                              omegas, delays, TretrievedNormalized, cmap='YlGnBu_r')
+                              omegas, delays, TretrievedNormalized, cmap='nipy_spectral')
     fig.colorbar(im1, ax=ax[1][1])
     ax[1][1].set_xlabel("ω (2π/fs)")
     ax[1][1].set_ylabel("τ (fs)")

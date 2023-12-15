@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Configuration parameters and measurements
-N=128                                                                    # Number of samples
-centralWaveLength=790                                                    # Central wavelength in nanometers
+N=128                                                                # Number of samples
+centralWaveLength=790                                                # Central wavelength in nanometers
 axisFilename="./tests/expResults/axis_non_compressed_pulse.csv"          # Filename of the axis of the trace (1st column: angular frequencies, 2nd column: delays)
 traceFilename="./tests/expResults/non_compressed_pulse_2100mA_trace.csv" # Numerical values of the trace (N rows with N columns)
 
 # Retriever parameters
-retriever="COPRA"      # Selects a switch between 'COPRA', 'GPA' or 'PIE'
-maximumIterations=2000 # Maximum number of iterations for the retrieval
-tolerance=1e-16        # Tolerance of the trace error (R)
+retriever="COPRA"     # Selects a switch between 'COPRA', 'GPA' or 'PIE'
+maximumIterations=500 # Maximum number of iterations for the retrieval
+tolerance=1e-16       # Tolerance of the trace error (R)
 
 # Initial candidate selection. Leave for blank for a random pulse with TBP = 0.51
 initialCandidateField="none"    # Filename of the field for the initial candidate

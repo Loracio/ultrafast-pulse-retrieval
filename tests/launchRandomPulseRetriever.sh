@@ -5,11 +5,11 @@ N=256                 # Number of samples
 deltaT=6.12           # Time spacing in femtoseconds
 centralWaveLength=790 # Central wavelength in nanometers
 TBP=2.33              # Time-Bandwidth product of the random pulse to generate
-noiseLevel=0.05       # Noise level added to the random pulse's trace
+noiseLevel=0.0        # Noise level added to the random pulse's trace
 
 # Retriever parameters
-retriever="COPRA"     # Selects a switch between 'COPRA', 'GPA' or 'PIE'
-maximumIterations=300 # Maximum number of iterations for the retrieval
+retriever="PIE"       # Selects a switch between 'COPRA', 'GPA' or 'PIE'
+maximumIterations=500 # Maximum number of iterations for the retrieval
 tolerance=1e-12       # Tolerance of the trace error (R)
 
 # Initial candidate selection. Leave for blank for a random pulse with TBP = 0.5

@@ -4,7 +4,7 @@ This module aims to implement some pulse retrieval algorithms for SHG-FROG trace
 
 This module is highly inspired in Nils C. Geib work in the Python module "PyPret" [(link to the GitHub repo)](https://github.com/ncgeib/pypret) and the paper ["Common pulse retrieval algorithm: a fast and universal method to retrieve ultrashort pulses"](https://opg.optica.org/optica/fulltext.cfm?uri=optica-6-4-495&id=408956). Check it out for more in detail info about the retrievers and the formalism. The code follows PyPret's philosophy and also tries to follow its name convention.
 
-### Supported retrieval algorithms
+## Supported retrieval algorithms
 
 Currently there are three different working retrieval algorithms for SHG-FROG traces:
 
@@ -36,18 +36,21 @@ The random pulse generation can be used to create a database of pulses and its c
 
 ## Documentation
 
-The code is in the process of being properly documented. Some examples of how the different classes work can be found inside the ```./tests``` folder.
+The core classes and methods from `src` are properly documented. I'm thinking about making a document/web including all the references and some examples, but for now, this will do.
+
+Some examples of how the different classes work can be found inside the ```./tests``` folder.
 
 ## Compilation
 
 The code calls [fftw](https://www.fftw.org/) library to compute fast fourier transforms. Make sure to include the corresponding flag when compiling the programs.
 
 ## Author
+
 This code has been developed by Víctor Loras Herrero in the framework of the master's thesis inside the master's degree in mathematical modeling and research, statistics and computation of the University of Zaragoza.
 
 It has been highly inspired by Neils C. Geib on [PyPret](https://github.com/ncgeib/pypret).
 
-For any questions or comments, you can contact me via email: vloras@unizar.es
+For any questions or comments, you can contact me via email: <vloras@unizar.es>
 
 ## License
 

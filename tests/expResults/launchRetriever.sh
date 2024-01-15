@@ -3,8 +3,8 @@
 # Configuration parameters and measurements
 N=128                                                                # Number of samples
 centralWaveLength=790                                                # Central wavelength in nanometers
-axisFilename="./tests/expResults/axis_non_compressed_pulse.csv"          # Filename of the axis of the trace (1st column: angular frequencies, 2nd column: delays)
-traceFilename="./tests/expResults/non_compressed_pulse_2100mA_trace.csv" # Numerical values of the trace (N rows with N columns)
+axisFilename="./tests/expResults/axis_compressed_pulse.csv"          # Filename of the axis of the trace (1st column: angular frequencies, 2nd column: delays)
+traceFilename="./tests/expResults/compressed_pulse_900mA_trace.csv" # Numerical values of the trace (N rows with N columns)
 
 # Retriever parameters
 retriever="COPRA"     # Selects a switch between 'COPRA', 'GPA' or 'PIE'

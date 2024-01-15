@@ -7,8 +7,6 @@
  *
  * Check out Nils C Geib "PyPret" Pulse module which inspired this code.
  * https://pypret.readthedocs.io/en/latest/apidoc/pypret.pulse.html
- * 
- * ! TODO: this module is not yet properly docummented.
  *
  */
 
@@ -23,9 +21,24 @@
 #include "fourier.hpp"
 #include "utils.hpp"
 
-//! cite author of this function
-//! https://codereview.stackexchange.com/questions/103762/implementation-of-brents-algorithm-to-find-roots-of-a-polynomial
-void brents_fun(std::function<double(double)> f, double lower_bound, double upper_bound, double TOL, double MAX_ITER)
+/**
+ * @brief Brent's method to find the root of a mathematical function.
+ *
+ * Brent's method combines root bracketing, interval bisection, and inverse quadratic interpolation.
+ * It has the reliability of bisection but it can be as quick as some less-reliable methods when the function's root is smooth.
+ *
+ * This code has been taken from the following StackOverflow answer:
+ * https://codereview.stackexchange.com/questions/103762/implementation-of-brents-algorithm-to-find-roots-of-a-polynomial
+ *
+ * @param f The function for which we are trying to approximate a solution f(x)=0.
+ * @param lower_bound The lower boundary for the range in which to search for a solution.
+ * @param upper_bound The upper boundary for the range in which to search for a solution.
+ * @param TOL The tolerance which the function uses to determine if it has found the root of the function.
+ * @param MAX_ITER The maximum number of iterations to perform before the function stops.
+ *
+ * @return void
+ */
+void brents_fun(std::function<double(double)> f, double lower_bound, double upper_bound, const double TOL, const double MAX_ITER)
 {
     double a = lower_bound;
     double b = upper_bound;
@@ -123,81 +136,144 @@ void brents_fun(std::function<double(double)> f, double lower_bound, double uppe
     std::cout << "The solution does not converge or iterations are not sufficient" << std::endl;
 } // end brent_fun
 
+/**
+ * @class Pulse
+ * @brief Represents a pulse in the time and frequency domain.
+ *
+ * This class provides methods for manipulating and analyzing pulses.
+ * It uses Fourier transforms to switch between the time and frequency domain.
+ */
 class Pulse
 {
 private:
-    FourierTransform *_ft;
-    // double omega0;
+    FourierTransform *_ft; ///< Fourier transform object used for time-frequency conversions.
 
-    std::vector<std::complex<double>> _field;
-    std::vector<std::complex<double>> _spectrum;
+    std::vector<std::complex<double>> _field;    ///< The pulse in the time domain.
+    std::vector<std::complex<double>> _spectrum; ///< The pulse in the frequency domain.
 
     // Random pulse generation variables
-    double _tbp;
-    double t0;
-    double omega0;
-    double temporalWidth;
+    double _tbp;          ///< Time-bandwidth product.
+    double t0;            ///< Central time of the pulse.
+    double omega0;        ///< Central frequency of the pulse.
+    double temporalWidth; ///< Temporal width of the pulse.
 
-    std::vector<std::complex<double>> candidateField;
+    std::vector<std::complex<double>> candidateField; ///< Candidate field for pulse shaping. This is used in the randomPulse method.
 
+    /**
+     * @brief Objective function for pulse shaping.
+     *
+     * Used in the randomPulse method.
+     * This function calculates the difference between the desired time-bandwidth product and the time-bandwidth product of the candidate field after applying a temporal filter.
+     *
+     * @param factor The factor by which to scale the temporal width of the Gaussian filter.
+     * @return The difference between the desired and actual time-bandwidth product.
+     */
     double objective(double const &factor)
     {
 
-        std::vector<double> temporalFilter = gaussian(this->_ft->t, this->t0, this->temporalWidth * factor);
+        std::vector<double> temporalFilter = gaussian(this->_ft->t, this->t0, this->temporalWidth * factor); // Gaussian filter in the time domain
 
-        std::vector<std::complex<double>> result(this->N);
+        std::vector<std::complex<double>> result(this->N); // E(t) * Gaussian(t)
 
         for (int i = 0; i < this->N; i++)
         {
-            result[i] = this->candidateField[i] * temporalFilter[i];
+            result[i] = this->candidateField[i] * temporalFilter[i]; // E(t) * Gaussian(t)
         }
 
-        this->setField(result);
+        this->setField(result); // Set the field to the filtered candidate field
 
-        return this->_tbp - this->getTimeBandwidthProduct();
+        return this->_tbp - this->getTimeBandwidthProduct(); // Return the difference between the desired and actual time-bandwidth product
     }
 
 public:
-    int N;
-    
+    int N; ///< Number of points in the time and frequency domain.
+
+    /**
+     * @brief Construct a new Pulse object.
+     *
+     * @param ft Fourier transform object used for time-frequency conversions.
+     */
     Pulse(FourierTransform &ft)
     {
         this->_ft = &ft;
         this->N = this->_ft->N;
     }
 
+    /**
+     * @brief Sets the pulse in the time domain.
+     *
+     * Stores the value in the _field attribute and updates the _spectrum attribute.
+     *
+     * @param val The pulse in the time domain.
+     *
+     */
     void setField(const std::vector<std::complex<double>> &val)
     {
         this->_field = val;
         this->updateSpectrum();
     }
 
+    /**
+     * @brief Sets the pulse in the frequency domain.
+     *
+     * Stores the value in the _spectrum attribute and updates the _field attribute.
+     *
+     * @param val The pulse in the frequency domain.
+     *
+     */
     void setSpectrum(const std::vector<std::complex<double>> &val)
     {
         this->_spectrum = val;
         this->updateField();
     }
 
+    /**
+     * @brief Updates the pulse in the time domain.
+     *
+     * Updates the _field attribute using the _spectrum attribute.
+     *
+     */
     void updateField()
     {
         this->_field = this->_ft->backwardTransform(this->_spectrum);
     }
 
+    /**
+     * @brief Updates the pulse in the frequency domain.
+     *
+     * Updates the _spectrum attribute using the _field attribute.
+     *
+     */
     void updateSpectrum()
     {
         this->_spectrum = this->_ft->forwardTransform(this->_field);
     }
 
+    /**
+     * @brief Returns the pulse in the time domain.
+     *
+     * @return The pulse in the time domain.
+     */
     std::vector<std::complex<double>> getField()
     {
         return this->_field;
     }
 
+    /**
+     * @brief Returns the pulse in the frequency domain.
+     *
+     * @return The pulse in the frequency domain.
+     */
     std::vector<std::complex<double>> getSpectrum()
     {
         return this->_spectrum;
     }
 
+    /**
+     * @brief Returns the intensity of the pulse in the time domain.
+     *
+     * @return The intensity of the pulse in the time domain as a vector of doubles.
+     */
     std::vector<double> getIntensity()
     {
         std::vector<double> intensity(this->N);
@@ -210,6 +286,11 @@ public:
         return intensity;
     }
 
+    /**
+     * @brief Returns the amplitude of the pulse in the time domain.
+     *
+     * @return The amplitude of the pulse in the time domain as a vector of doubles.
+     */
     std::vector<double> getAmplitude()
     {
         std::vector<double> amplitude(this->N);
@@ -222,11 +303,21 @@ public:
         return amplitude;
     }
 
+    /**
+     * @brief Returns the phase of the pulse in the time domain.
+     *
+     * @return The phase of the pulse in the time domain as a vector of doubles.
+     */
     std::vector<double> getPhase()
     {
         return unwrapPhase(this->_field);
     }
 
+    /**
+     * @brief Returns the intensity of the pulse in the frequency domain.
+     *
+     * @return The intensity of the pulse in the frequency domain as a vector of doubles.
+     */
     std::vector<double> getSpectralIntensity()
     {
         std::vector<double> spectralIntensity(this->N);
@@ -239,6 +330,11 @@ public:
         return spectralIntensity;
     }
 
+    /**
+     * @brief Returns the amplitude of the pulse in the frequency domain.
+     *
+     * @return The amplitude of the pulse in the frequency domain as a vector of doubles.
+     */
     std::vector<double> getSpectralAmplitude()
     {
         std::vector<double> spectralAmplitude(this->N);
@@ -251,24 +347,49 @@ public:
         return spectralAmplitude;
     }
 
+    /**
+     * @brief Returns the phase of the pulse in the frequency domain.
+     *
+     * @return The phase of the pulse in the frequency domain as a vector of doubles.
+     */
     std::vector<double> getSpectralPhase()
     {
         return unwrapPhase(this->_spectrum);
     }
 
+    /**
+     * @brief Returns the time-bandwidth product of the pulse.
+     *
+     * Time-bandwidth product is defined as the product of the pulse duration and the spectral width,
+     * TBP = Δt * Δω,
+     * It is computed as the standard deviation of the pulse in the time domain multiplied by the standard deviation of the pulse in the frequency domain.
+     *
+     * @return The time-bandwidth product of the pulse.
+     */
     double getTimeBandwidthProduct()
     {
         return stdDev(this->_ft->t, this->getIntensity()) * stdDev(this->_ft->omega, this->getSpectralIntensity());
     }
 
+    /**
+     * @brief Returns the SHG-FROG trace of the pulse.
+     *
+     * The SHG-FROG trace is defined as the following expression:
+     * T(ω, τ) =  | ∫ E(t)E(t - τ) exp(-i ω t) dt |² = |FT[E(t)E(t - τ)]|²
+     *
+     * @return The SHG-FROG trace of the pulse. It is a N x N matrix of doubles.
+     */
     std::vector<std::vector<double>> getTrace()
     {
-        std::vector<double> tau(this->N);
+        std::vector<double> tau(this->N); // τ, delays
         for (int i = 0; i < this->N; i++)
         {
-            tau[i] = (i - std::floor(0.5 * this->N)) * this->_ft->deltaT;
+            tau[i] = (i - std::floor(0.5 * this->N)) * this->_ft->deltaT; // τ = (i - N/2) * Δt
         }
 
+        // The delay can be introduced in the frequency domain by multiplying the spectrum by exp(-i ω τ)
+        // This is convenient to avoid the need to interpolate the field in the time domain
+        // Also simplifies the calculation of the trace and other terms in the retrieval algorithms
         std::vector<std::vector<std::complex<double>>> delayed_spectrum(this->N, std::vector<std::complex<double>>(this->N));
 
         for (int i = 0; i < this->N; i++) // iterates through delay values
@@ -285,7 +406,7 @@ public:
 
         for (int i = 0; i < N; i++)
         {
-            delayed_pulse = this->_ft->backwardTransform(delayed_spectrum[i]);
+            delayed_pulse = this->_ft->backwardTransform(delayed_spectrum[i]); // E(t - τ)
             for (int j = 0; j < N; j++)
             {
                 signal_operator[j] = this->_field[j] * delayed_pulse[j]; // E(t)E(t - τ)
@@ -302,17 +423,37 @@ public:
         return trace_values;
     }
 
+    /**
+     * @brief Creates a random pulse with a specified time-bandwidth product.
+     *
+     * This method uses the algorithm described in Nils C Geib "PyPret" Pulse module.
+     * https://pypret.readthedocs.io/en/latest/apidoc/pypret.pulse.html
+     *
+     * The algorithm starts from random complex values in the frequency domain, which decay in the extremes of the grid
+     * to the float roundoff error. These random complex values are filtered in the frequency domain by a Gaussian filter.
+     * It then transforms into the time domain and applies a Gaussian filter,
+     * then transforms into the time domain and applies another Gaussian filter. The filter functions are
+     * Gaussians with the specified time-bandwidth product.
+     * The chosen filter functions only roughly give the correct TBP.
+     * To obtain the exact result we scale the temporal filter bandwidth by a factor and perform a scalar minimization on that value.
+     *
+     * The larger the time-bandwidth product, the more points are needed in the time and frequency domain.
+     *
+     * @param TBP The desired time-bandwidth product.
+     *
+     * @return 1 if the pulse was created successfully, 0 otherwise.
+     */
     bool randomPulse(double TBP)
     {
-        this->_tbp = TBP;
+        this->_tbp = TBP; // Store the desired time-bandwidth product
 
-        this->t0 = 0.5 * (this->_ft->t[0] + this->_ft->t[this->N - 1]);
-        this->omega0 = 0.5 * (this->_ft->omega[0] + this->_ft->omega[this->N - 1]);
+        this->t0 = 0.5 * (this->_ft->t[0] + this->_ft->t[this->N - 1]);             // Central time of the grid
+        this->omega0 = 0.5 * (this->_ft->omega[0] + this->_ft->omega[this->N - 1]); // Central frequency of the grid
 
         // Initialize random number generator
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        std::random_device rd;                                 // obtain a random number from hardware
+        std::mt19937 gen(rd());                                // seed the generator
+        std::uniform_real_distribution<double> dist(0.0, 1.0); // define the range
 
         // This is roughly the log of the roundoff error induced by an FFT
         double logEdge = std::log(this->N * std::numeric_limits<double>::epsilon());
@@ -344,7 +485,7 @@ public:
             return 1;
         }
 
-        std::vector<double> spectralFilter = gaussian(this->_ft->omega, this->omega0, spectralWidth);
+        std::vector<double> spectralFilter = gaussian(this->_ft->omega, this->omega0, spectralWidth); // Gaussian filter in the frequency domain
 
         /*
             The algorithm works by iteratively filtering in the frequency and time
@@ -358,14 +499,14 @@ public:
         double factorMin = 0.5;
         double factorMax = 1.5;
 
-        std::vector<std::complex<double>> candidateSpectrum(this->N);
+        std::vector<std::complex<double>> candidateSpectrum(this->N); // Candidate spectrum for pulse shaping
 
         for (int i = 0; i < N; ++i)
         {
-            candidateSpectrum[i] = spectralFilter[i] * dist(gen) * std::exp(std::complex<double>(0.0, 2 * M_PI * dist(gen)));
+            candidateSpectrum[i] = spectralFilter[i] * dist(gen) * std::exp(std::complex<double>(0.0, 2 * M_PI * dist(gen))); // Random complex values in the frequency domain multiplied by the Gaussian filter
         }
 
-        this->candidateField = this->_ft->backwardTransform(candidateSpectrum);
+        this->candidateField = this->_ft->backwardTransform(candidateSpectrum); // Transform to the time domain
 
         // Ensure the objective function changes sign in the chosen bounds
         int iters = 0;
@@ -374,14 +515,14 @@ public:
             // For some random arrays, this condition is not always fulfilled. Try again.
             for (int i = 0; i < N; ++i)
             {
-                candidateSpectrum[i] = spectralFilter[i] * dist(gen) * std::exp(std::complex<double>(0.0, 2 * M_PI * dist(gen)));
+                candidateSpectrum[i] = spectralFilter[i] * dist(gen) * std::exp(std::complex<double>(0.0, 2 * M_PI * dist(gen))); // New random complex values in the frequency domain multiplied by the Gaussian filter
             }
 
             this->candidateField = this->_ft->backwardTransform(candidateSpectrum);
 
             iters++;
 
-            if (iters == 100)
+            if (iters == 100) // If it fails 100 times, it is very likely that it will not work
             {
                 throw std::runtime_error("Could not create a pulse for these parameters!");
                 return 0;
@@ -394,7 +535,10 @@ public:
             return this->objective(factor);
         };
 
+        // Perform scalar minimization to find the optimal value for the temporal filter bandwidth
         brents_fun(objectiveFunction, factorMin, factorMax, 1e-12, 1000);
+        // The brents_fun already has changed the values of the field and spectrum attributes
+        // So there is no need to update them
 
         return 1;
     }

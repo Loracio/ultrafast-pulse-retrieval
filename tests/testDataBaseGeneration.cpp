@@ -21,7 +21,7 @@
 int main()
 {
     // Pulse parameters
-    int N = 64;
+    int N = 128;
     double signalDuration = 1;
     double deltaT = signalDuration / N;
 
@@ -34,10 +34,10 @@ int main()
     std::vector<std::complex<double>> field;
 
     // DB parameters
-    int numberOfPulses = 1000;
+    int numberOfPulses = 500;
 
     double initialTBP = 0.51;
-    double finalTBP = 0.785;
+    double finalTBP = 1.31;
     double stepTBP = 0.025;
 
     int intervals = (finalTBP - initialTBP) / stepTBP;

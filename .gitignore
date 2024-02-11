@@ -134,7 +134,7 @@ dmypy.json
 .pyre/
 
 ################################################################################################
-# Lo siguiente es 'robado' de Unai Lería Fortea (@QuanticPony). Muchas gracias.
+
 # Prerequisites
 *.d
 
@@ -190,7 +190,12 @@ dkms.conf
 
 # vs code
 .vscode
+
+# h5 files
 *.h5
 
 # txt test files
 *.txt
+
+# tfrecord files
+*.tfrecords

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-plt.rcParams.update({'font.size': 20})  # Tamaño de la fuente del plot
+plt.rcParams.update({'font.size': 20})
 
 
 def readResult(filename):

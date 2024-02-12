@@ -86,27 +86,27 @@ int main()
             std::vector<std::complex<double>> zeroPhaseField(N);
 
             // Shift phase of each element in field by -phase
-            for (int i = 0; i < N; ++i) {
-                zeroPhaseField[i] = field[i] * std::exp(std::complex<double>(0, -phase));
+            for (int k = 0; k < N; ++k) {
+                zeroPhaseField[k] = field[k] * std::exp(std::complex<double>(0, -phase));
             }
 
             // Compute the peak index again
             int maxIndex;
             double maxField = 0;
-            for (int i = 0; i < N; i++)
+            for (int k = 0; k < N; k++)
             {
-                if (std::abs(zeroPhaseField[i]) > maxField)
+                if (std::abs(zeroPhaseField[k]) > maxField)
                 {
-                    maxIndex = i;
-                    maxField = std::abs(zeroPhaseField[i]);
+                    maxIndex = k;
+                    maxField = std::abs(zeroPhaseField[k]);
                 }
             }
             
 
             // Shift the field so that the peak is at the center with a for loop
             std::vector<std::complex<double>> shiftedField(N);
-            for (int i = 0; i < N; ++i) {
-                shiftedField[i] = zeroPhaseField[(i + peak_index + N / 2) % N];
+            for (int k = 0; k < N; ++k) {
+                shiftedField[k] = zeroPhaseField[(k + maxIndex + N / 2) % N];
             }
 
             // Replace original field with zeroPhaseField

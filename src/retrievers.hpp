@@ -61,8 +61,11 @@ public:
     std::vector<std::complex<double>> gradZ; // Stores the value of the gradient of Z
     double gamma;                            // Gradient descent step
 
+    bool verbose = false; // Verbose mode
+
     retrieverBase(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured)
     {
+
         this->_ft = &ft;        // Fourier transform object to perform fast fourier transforms
         this->N = this->_ft->N; // Number of samples
 
@@ -298,22 +301,14 @@ public:
     void computeResiduals()
     {
         std::vector<std::vector<double>> difference(this->N, std::vector<double>(this->N));
+        double sum = 0.0;
 
         for (int i = 0; i < this->N; ++i)
         {
             for (int j = 0; j < this->N; ++j)
             {
                 difference[i][j] = this->Tmeas[i][j] - this->mu * this->Tmn[i][j]; // Tmeas - mu * Tmn
-            }
-        }
-
-        // Calculate the sum of squared differences
-        double sum = 0.0;
-        for (int i = 0; i < this->N; i++)
-        {
-            for (int j = 0; j < this->N; j++)
-            {
-                sum += difference[i][j] * difference[i][j]; // (Tmeas - mu * Tmn)²
+                sum += difference[i][j] * difference[i][j];                        // (Tmeas - mu * Tmn)²
             }
         }
 
@@ -599,8 +594,11 @@ public:
                 this->bestField = this->result->getField(); // Update the best field
             }
 
-            std::cout << "Iteration = " << nIter + 1 << "\t"
-                      << "R = " << this->R << std::endl;
+            if (this->verbose)
+            {
+                std::cout << "Iteration = " << nIter + 1 << "\t"
+                          << "R = " << this->R << std::endl;
+            }
 
             nIter++;
         }
@@ -853,8 +851,11 @@ public:
                 this->bestField = this->result->getField(); // Update the best field
             }
 
-            std::cout << "Iteration = " << nIter + 1 << "\t"
-                      << "R = " << this->R << std::endl;
+            if (this->verbose)
+            {
+                std::cout << "Iteration = " << nIter + 1 << "\t"
+                          << "R = " << this->R << std::endl;
+            }
 
             nIter++;
         }
@@ -1390,7 +1391,10 @@ public:
                     if (stepsSinceLastImprovement == 5) // If the result is not improved in 5 steps, start global iteration
                     {
                         mode = 0; // Change to global iteration
-                        std::cout << "Local iteration ended, starting global iteration" << std::endl;
+                        if (this->verbose)
+                        {
+                            std::cout << "Local iteration ended, starting global iteration" << std::endl;
+                        }
                         // We pick the best result from the local iteration to start the global iteration
                         this->result->setSpectrum(this->bestSpectrum); // Updates also the field!
                     }
@@ -1422,8 +1426,11 @@ public:
                 }
             }
 
-            std::cout << "Iteration = " << nIter + 1 << "\t"
-                      << "R = " << this->R << std::endl;
+            if (this->verbose)
+            {
+                std::cout << "Iteration = " << nIter + 1 << "\t"
+                          << "R = " << this->R << std::endl;
+            }
 
             nIter++; // Increase the number of iterations
         }

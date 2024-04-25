@@ -323,7 +323,13 @@ std::vector<std::vector<double>> add_noise(const std::vector<std::vector<double>
     {
         for (int j = 0; j < N; j++)
         {
-            noisyTrace[i][j] = originalTrace[i][j] + std::abs(stdDev * distribution(gen));
+            noisyTrace[i][j] = originalTrace[i][j];
+            // Add the noise if the value is above a threshold (0.001 * TmeasMax)
+            if (originalTrace[i][j] > 0.001 * TmeasMax)
+            {
+                noisyTrace[i][j] += stdDev * distribution(gen);
+                noisyTrace[i][j] = std::abs(noisyTrace[i][j]);
+            }
         }
     }
 

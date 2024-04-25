@@ -26,7 +26,7 @@ def serialize_example(real_field, imag_field, tbp):
 
 if __name__ == '__main__':
     N = 128
-    NUMBER_OF_PULSES = 5000
+    NUMBER_OF_PULSES = 4000
 
     filename = f'{NUMBER_OF_PULSES}_randomNormalizedPulses_N{N}'
     with h5py.File(filename + '.h5', 'r') as f:
@@ -43,5 +43,5 @@ if __name__ == '__main__':
                 # Read imaginary part of field
                 imag_field = np.array(group['imag_field'])
                 
-                example = serialize_example(TBP, real_field, imag_field)
+                example = serialize_example(real_field, imag_field, TBP)
                 writer.write(example)

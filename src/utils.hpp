@@ -325,11 +325,52 @@ std::vector<std::vector<double>> add_noise(const std::vector<std::vector<double>
         {
             noisyTrace[i][j] = originalTrace[i][j];
             // Add the noise if the value is above a threshold (0.001 * TmeasMax)
-            if (originalTrace[i][j] > 0.001 * TmeasMax)
-            {
+            // if (originalTrace[i][j] > 0.001 * TmeasMax)
+            // {
                 noisyTrace[i][j] += stdDev * distribution(gen);
                 noisyTrace[i][j] = std::abs(noisyTrace[i][j]);
-            }
+            // }
+        }
+    }
+
+    return noisyTrace;
+}
+
+std::vector<std::vector<double>> add_noise_with_snr(const std::vector<std::vector<double>> &originalTrace, int N, double desired_snr_db)
+{
+    std::vector<std::vector<double>> noisyTrace(N, std::vector<double>(N));
+
+    // Seed for random number generation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    // Calculate power of the signal
+    double signal_power = 0;
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            signal_power += std::pow(originalTrace[i][j], 2);
+        }
+    }
+    signal_power /= (N * N);
+
+    // Calculate power of the noise needed to achieve the desired SNR
+    double noise_power = signal_power / std::pow(10, desired_snr_db / 10);
+
+    // Calculate standard deviation of the noise
+    double stdDev = std::sqrt(noise_power);
+
+    // Distribution for random noise
+    std::normal_distribution<> distribution(0, stdDev);
+
+    // Add noise to each element in the matrix
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            noisyTrace[i][j] = originalTrace[i][j] + distribution(gen);
+            noisyTrace[i][j] = std::abs(noisyTrace[i][j]);
         }
     }
 

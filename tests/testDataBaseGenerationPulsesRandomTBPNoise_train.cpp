@@ -137,12 +137,13 @@ int main()
     std::vector<std::vector<double>> noisyTrace;
 
     // DB parameters
-    int numberOfPulses = 1000;
+    int numberOfPulses = 10;
 
     double initialTBP = 0.51;
     double finalTBP = 1.575;
 
-    double noiseLevel = 0.05;
+    // double noiseLevel = 0.01;
+    double snr = 15;
 
     int maximumIterations = 500; // Maximum number of iterations for the COPRA algorithm
     double tolerance = 1e-10;     // Tolerance for the COPRA algorithm
@@ -153,7 +154,7 @@ int main()
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dis(initialTBP, finalTBP);
 
-    std::string filename = std::to_string(numberOfPulses) + "_randomPulses_N" + std::to_string(N) + "with_" + std::to_string(noiseLevel) + "noise.h5";
+    std::string filename = std::to_string(numberOfPulses) + "_randomPulses_N" + std::to_string(N) + "_" + std::to_string(static_cast<int>(snr)) + "SNR.h5";
     // Create the HDF5 file
     H5::H5File file(filename, H5F_ACC_TRUNC);
     // Check if the file was opened correctly
@@ -283,7 +284,8 @@ int main()
 
         originalTrace = generatedPulse.getTrace();
         // Add gaussian noise to the trace
-        noisyTrace = add_noise(originalTrace, N, noiseLevel);
+        // noisyTrace = add_noise(originalTrace, N, noiseLevel);
+        noisyTrace = add_noise_with_snr(originalTrace, N, snr);
 
         // Retrieve the pulse from the noisy trace using COPRA
         COPRA retriever(ft, noisyTrace);
@@ -443,6 +445,33 @@ int main()
             dataset.write(noisyTraceVector.data(), H5::PredType::NATIVE_DOUBLE);
         }
 
+        // Write the retrieved pulse real part
+        {
+            hsize_t dims[1] = {static_cast<hsize_t>(N)};
+            H5::DataSpace dataspace(1, dims);
+            H5::DataSet dataset = pulseGroup.createDataSet("real_retrieved_field", H5::PredType::NATIVE_DOUBLE, dataspace);
+            std::vector<double> realRetrievedField(N);
+            for (int k = 0; k < N; ++k)
+            {
+                realRetrievedField[k] = std::real(retrievedField[k]) / maxField;
+            }
+            dataset.write(realRetrievedField.data(), H5::PredType::NATIVE_DOUBLE);
+        }
+
+        // Write the retrieved pulse imaginary part
+        {
+            hsize_t dims[1] = {static_cast<hsize_t>(N)};
+            H5::DataSpace dataspace(1, dims);
+            H5::DataSet dataset = pulseGroup.createDataSet("imag_retrieved_field", H5::PredType::NATIVE_DOUBLE, dataspace);
+            std::vector<double> imagRetrievedField(N);
+            for (int k = 0; k < N; ++k)
+            {
+                imagRetrievedField[k] = std::imag(retrievedField[k]) / maxField;
+            }
+            dataset.write(imagRetrievedField.data(), H5::PredType::NATIVE_DOUBLE);
+        }
+
+
         // Compute the trace and field MSE
         traceMSEs[i] = computeTraceMSE(originalTrace, retrievedPulse.getTrace(), N);
         fieldMSEs[i] = computeFieldMSE(field, retrievedField, N);
@@ -462,12 +491,6 @@ int main()
 
     // Compute the average error and the average retrieval time
     double averageError = std::accumulate(errors.begin(), errors.end(), 0.0) / errors.size();
-
-    // Print all average errors
-    for (int i = 0; i < numberOfPulses; i++)
-    {
-        std::cout << "Error for pulse " << i << ": " << errors[i] << std::endl;
-    }
 
     double averageRetrievalTime = std::accumulate(retrievalTimes.begin(), retrievalTimes.end(), 0.0) / retrievalTimes.size();
 

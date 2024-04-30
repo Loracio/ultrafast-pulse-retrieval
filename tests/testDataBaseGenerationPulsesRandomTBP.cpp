@@ -130,7 +130,7 @@ int main()
             std::vector<std::complex<double>> flippedField(N);
             for (int k = 0; k < N; k++)
             {
-                flippedField[k] = field[N - k];
+                flippedField[k] = std::conj(field[N - k]);
             }
             field = flippedField;
         }

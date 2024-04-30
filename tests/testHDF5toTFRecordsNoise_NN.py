@@ -107,7 +107,7 @@ def read_tfrecord_noisyTraces(FILE_PATH, N, NUMBER_OF_PULSES, BATCH_SIZE):
 if __name__ == '__main__':
     N = 128
     NUMBER_OF_PULSES = 10
-    SNR = 15
+    SNR = 10
 
     filename = f'{NUMBER_OF_PULSES}_randomPulses_N{N}_{SNR}SNR'
     with h5py.File(filename + '.h5', 'r') as f:

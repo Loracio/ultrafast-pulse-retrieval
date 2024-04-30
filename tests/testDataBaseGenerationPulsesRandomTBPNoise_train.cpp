@@ -143,7 +143,7 @@ int main()
     double finalTBP = 1.575;
 
     // double noiseLevel = 0.01;
-    double snr = 15;
+    double snr = 10;
 
     int maximumIterations = 500; // Maximum number of iterations for the COPRA algorithm
     double tolerance = 1e-10;     // Tolerance for the COPRA algorithm
@@ -232,13 +232,13 @@ int main()
             areaSecondHalf += std::abs(field[k]) * deltaT;
         }
 
-        // 3. If the area of the first half is greater than the second half, flip the pulse.
+        // 3. If the area of the first half is greater than the second half, flip and conjugate the pulse.
         if (areaFirstHalf > areaSecondHalf)
         {
             std::vector<std::complex<double>> flippedField(N);
             for (int k = 0; k < N; k++)
             {
-                flippedField[k] = field[N - k];
+                flippedField[k] = std::conj(field[N - k]);
             }
             field = flippedField;
         }
@@ -362,13 +362,13 @@ int main()
             areaSecondHalf += std::abs(retrievedField[k]) * deltaT;
         }
 
-        // 3. If the area of the first half is greater than the second half, flip the pulse.
+        // 3. If the area of the first half is greater than the second half, flip and conjugate the pulse.
         if (areaFirstHalf > areaSecondHalf)
         {
             std::vector<std::complex<double>> flippedField(N);
             for (int k = 0; k < N; k++)
             {
-                flippedField[k] = retrievedField[N - k];
+                flippedField[k] = std::conj(retrievedField[N - k]);
             }
             retrievedField = flippedField;
         }

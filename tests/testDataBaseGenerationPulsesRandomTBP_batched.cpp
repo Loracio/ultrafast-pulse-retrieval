@@ -30,7 +30,7 @@ int max_magnitude_index(const std::vector<std::complex<double>> &v)
 int main()
 {
     // Pulse parameters
-    int N = 128;
+    int N = 64;
     double signalDuration = 1;
     double deltaT = signalDuration / N;
 
@@ -43,13 +43,13 @@ int main()
     std::vector<std::complex<double>> field;
 
     // DB parameters
-    int numberOfPulses = 20000;
-    int batchSize = 1024;
+    int numberOfPulses = 1000;
+    int batchSize = 128;
     int nBatches = std::ceil(static_cast<double>(numberOfPulses) / batchSize);
     int pulsesPerBatch = numberOfPulses / nBatches;
 
     double initialTBP = 0.51;
-    double finalTBP = 1.575;
+    double finalTBP = 0.725;
 
     double currentTBP; // It will be randomly generated uniformly between initialTBP and finalTBP for each pulse
     // Random number generator

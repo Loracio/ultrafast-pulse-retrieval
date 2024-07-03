@@ -113,6 +113,56 @@ public:
         this->gradZ.reserve(this->N); // Stores the value of the gradient of Z. This varies depending on the algorithm.
     }
 
+    retrieverBase(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured, std::vector<std::complex<double>> &candidateField)
+    {
+
+        this->_ft = &ft;        // Fourier transform object to perform fast fourier transforms
+        this->N = this->_ft->N; // Number of samples
+
+        //! Starting pulse set by the user
+        this->result = new Pulse(ft);   // Resulting pulse of the retrieval
+        this->result->setField(candidateField); // Set the field of the pulse as the candidate field
+
+        this->Tmeas = Tmeasured; // Copy the measured trace
+        this->TmeasMaxSquared = 0;
+        for (int i = 0; i < this->N; i++)
+        {
+            for (int j = 0; j < this->N; j++)
+            {
+                if (Tmeasured[i][j] > this->TmeasMaxSquared)
+                {
+                    this->TmeasMaxSquared = Tmeasured[i][j];
+                }
+            }
+        }
+
+        this->TmeasMaxSquared *= this->TmeasMaxSquared; // Square the maximum value of the measured trace
+
+        this->tau.reserve(this->N); // Delays of the pulse in the time domain
+        for (int i = 0; i < this->N; i++)
+        {
+            this->tau[i] = (i - std::floor(0.5 * this->N)) * this->_ft->deltaT; // Delay values, given by the time step and the number of samples
+        }
+
+        this->delays.resize(this->N, std::vector<std::complex<double>>(this->N)); // Delays of the pulse in the frequency domain. NxN matrix that stores each delay for each frequency
+
+        for (int i = 0; i < this->N; i++) // iterates through delay values
+        {
+            for (int j = 0; j < this->N; j++) // iterates through frequency values
+            {
+                this->delays[i][j] = std::exp(std::complex<double>(0, this->_ft->omega[j] * tau[i])); // delay in the time domain by τ. It is a phase factor, exp(iωτ). Note the positive sign.
+            }
+        }
+
+        this->Smn.resize(this->N, std::vector<std::complex<double>>(this->N));     // Signal operator in frequency domain
+        this->Smk.resize(this->N, std::vector<std::complex<double>>(this->N));     // Signal operator in time domain
+        this->nextSmk.resize(this->N, std::vector<std::complex<double>>(this->N)); // Signal operator in time domain after projection
+        this->Amk.resize(this->N, std::vector<std::complex<double>>(this->N));     // Delayed pulse by τ_m
+        this->Tmn.resize(this->N, std::vector<double>(this->N));                   // SHG-FROG trace of the resulting pulse
+
+        this->gradZ.reserve(this->N); // Stores the value of the gradient of Z. This varies depending on the algorithm.
+    }
+
     /**
      * @brief Destroy the retriever Base object
      *
@@ -1270,7 +1320,18 @@ public:
         this->gradrmk.resize(this->N, std::vector<std::complex<double>>(this->N));
         this->bestSpectrum.reserve(this->N);
     }
-
+    /**
+     * @brief Construct a new COPRA object
+     *
+     * @param ft  The Fourier transform object to perform fast fourier transforms
+     * @param Tmeasured  Measured trace of the pulse to retrieve
+     * @param candidateField  Candidate field to start the retrieval
+     */
+    COPRA(FourierTransform &ft, std::vector<std::vector<double>> Tmeasured, std::vector<std::complex<double>> &candidateField) : retrieverBase(ft, Tmeasured, candidateField)
+        {
+        this->gradrmk.resize(this->N, std::vector<std::complex<double>>(this->N));
+        this->bestSpectrum.reserve(this->N);
+    }
     /**
      * @brief Construct a new COPRA object
      *

@@ -25,9 +25,9 @@ def serialize_example(real_field, imag_field, tbp):
     return example_proto.SerializeToString()
 
 if __name__ == '__main__':
-    N = 128
-    NUMBER_OF_PULSES = 20000
-    BATCH_SIZE = 1024
+    N = 64
+    NUMBER_OF_PULSES = 1000
+    BATCH_SIZE = 128
 
     nBatches = np.ceil(NUMBER_OF_PULSES / BATCH_SIZE).astype(int)
 

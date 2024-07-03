@@ -1,8 +1,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import scienceplots
 
 plt.rcParams.update({'font.size': 20})
+plt.style.use('science')
+plt.rcParams['figure.figsize'] = [6, 4]
+plt.rcParams['legend.frameon'] = True
+plt.rcParams['legend.fancybox'] = True
+plt.rcParams['axes.grid'] = True
+plt.rcParams['grid.alpha'] = 0.5
+plt.rcParams['grid.linestyle'] = '--'
+plt.rcParams['grid.linewidth'] = 0.5
+plt.rcParams['axes.axisbelow'] = True
 
 
 def readResult(filename):
@@ -20,7 +30,6 @@ def readResult(filename):
     except FileNotFoundError:
         print(f"File '{filename}' not found.")
         return np.array([])
-
 
 def readTrace(filename):
     try:
@@ -134,7 +143,7 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
                    centralWavelength + omegas), spectralPhase, '-.', color='red')
     ax[0][1].plot(np.nan, '-.', label='Retrieved spectral phase', color='red')
 
-    ax[0][1].set_xlabel("λ (nm)")
+    ax[0][1].set_xlabel(r"$\lambda$ (nm)")
     ax[0][1].set_ylabel("Intensity (a.u.)")
     twin_ax01.set_ylabel("Phase (rad)")
     ax[0][1].set_title("Frequency domain")
@@ -156,15 +165,15 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
     im0 = ax[1][0].pcolormesh(2 * np.pi * 300 / centralWavelength +
                               omegas, delays, TmeasNormalized, cmap='nipy_spectral')
     fig.colorbar(im0, ax=ax[1][0])
-    ax[1][0].set_xlabel("ω (2π/fs)")
-    ax[1][0].set_ylabel("τ (fs)")
+    ax[1][0].set_xlabel(r"$\omega$ (2$\pi$/fs)")
+    ax[1][0].set_ylabel(r"$\tau$ (fs)")
     ax[1][0].set_title("Measured trace")
 
     im1 = ax[1][1].pcolormesh(2 * np.pi * 300 / centralWavelength +
                               omegas, delays, TretrievedNormalized, cmap='nipy_spectral')
     fig.colorbar(im1, ax=ax[1][1])
-    ax[1][1].set_xlabel("ω (2π/fs)")
-    ax[1][1].set_ylabel("τ (fs)")
+    ax[1][1].set_xlabel(r"$\omega$ (2$\pi$/fs)")
+    ax[1][1].set_ylabel(r"$\tau$ (fs)")
 
     def format_scientific_notation(value, precision=2):
         exponent = int(np.floor(np.log10(abs(value))))
@@ -180,15 +189,32 @@ def plotRetrievalResult(N, originalField, originalSpectrum, field, spectrum, Tme
 
 def plotErrorEvolution(errors):
     fig, ax = plt.subplots()
-    ax.plot(errors, linewidth=2)
+
+    # Open file retrievedErrors_init.txt and read the errors
+    errors2 = []
+    with open("./tests/retrievedErrors_init.txt", 'r') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        errors2.append(float(line))
+
+    ax.plot(errors, linewidth=2, label="Random initialization")
+    ax.plot(errors2, linewidth=2, label="NN initialization")
     ax.set_xlabel("Iteration number")
     ax.set_ylabel("Trace error (R)")
-    ax.set_title("Trace error evolution")
+    # ax.set_title("Trace error evolution")
 
-    plt.ticklabel_format(axis="y", style="sci")
-    ax.ticklabel_format(useMathText=True)
+    # set logarithmic scale y
+    ax.set_yscale('log')
 
-    ax.grid()
+    # plt.ticklabel_format(axis="y", style="sci")
+    # ax.ticklabel_format(useMathText=True)
+
+    # ax.grid()
+    ax.legend()
+
+    # set tight layout
+    fig.tight_layout()
 
     return fig, ax
 
